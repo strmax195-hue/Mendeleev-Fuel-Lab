@@ -1,5 +1,6 @@
 """Build deterministic first-load data and README preview figures."""
 
+from dataclasses import asdict
 import json
 from engine.discovery_solver import advance, new_state
 from engine.fuel_simulator import ROOT, model_script
@@ -9,9 +10,25 @@ from engine.stage2_publish import build
 from engine.stage4_publish import build as build_planetary
 from engine.stage3_publish import build as build_calibration
 from engine.stage2_survival import canonical
+from engine.stage2_inputs import DOSES, PROPERTIES, WEAR_LIMIT
+from engine.fuel_quality import QUALITY
+from engine.stage3_calibration import ENGINES
+
+
+def cutaway_inputs():
+    return {
+        "engines": {key: asdict(engine) for key, engine in ENGINES.items()},
+        "quality": QUALITY,
+        "wear": {key: stock.wear for key, stock in PROPERTIES.items()},
+        "wearLimit": WEAR_LIMIT,
+        "doses": DOSES,
+    }
 
 
 def main():
+    (ROOT / "docs/cylinder-inputs.js").write_bytes(
+        ("globalThis.CYLINDER_INPUTS=" + canonical(cutaway_inputs()) + ";\n").encode("ascii")
+    )
     (ROOT / "docs/model.js").write_text(model_script())
     state = new_state()
     advance(state, 24)

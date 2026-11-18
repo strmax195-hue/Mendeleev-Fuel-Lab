@@ -25,6 +25,8 @@
     <script defer src="calibration.js"></script>
     <script defer src="planetary-seed.js"></script>
     <script defer src="planetary.js"></script>
+    <script defer src="cylinder-inputs.js"></script>
+    <script defer src="cylinder-model.js"></script>
     <script defer src="cylinder3d.js"></script>
     <script defer src="app.js"></script>
   </head>
@@ -463,32 +465,71 @@
             <div class="cyl-controls">
               <label>Candidate<select id="cyl-fuel"></select></label>
               <label
-                >Reference cycle<select id="cyl-cycle">
-                  <option value="Otto">Otto · AI-95</option>
-                  <option value="Diesel">Diesel · road diesel</option>
+                >Engine<select id="cyl-cycle">
+                  <option value="Otto">Otto · MPI</option>
+                  <option value="GDI">Otto · GDI turbo</option>
+                  <option value="Diesel">Diesel · common rail</option>
+                </select></label
+              >
+              <label
+                >Playback<select id="cyl-rpm">
+                  <option value="60">Slow-Mo · 60 RPM</option>
+                  <option value="800">Idle · 800 RPM</option>
+                  <option value="2000">Load · 2000 RPM</option>
                 </select></label
               >
               <button id="cyl-play" class="button outline" type="button">Play cycle</button>
             </div>
+            <div class="cyl-viewbar">
+              <div class="cyl-presets" role="group" aria-label="Camera preset">
+                <button type="button" data-cyl-view="side" aria-pressed="true">Side Cutaway</button>
+                <button type="button" data-cyl-view="chamber" aria-pressed="false">
+                  Combustion Chamber Close-Up
+                </button>
+                <button type="button" data-cyl-view="iso" aria-pressed="false">Isometric</button>
+              </div>
+              <span id="cyl-status">Loading cutaway</span>
+            </div>
             <div id="cyl-stage">
               <canvas
                 id="cyl-canvas"
-                aria-label="Three-dimensional side-by-side cutaway cylinders"
+                tabindex="0"
+                aria-describedby="cyl-camera-help"
+                aria-label="Orbit the paired cylinder cutaways"
               ></canvas>
               <div class="cyl-captions">
                 <span id="cyl-label"></span><span id="cyl-control"></span>
               </div>
             </div>
+            <p id="cyl-camera-help" class="note">
+              Drag to orbit. Scroll or pinch to zoom. Right-drag or use two fingers to pan. Keyboard
+              + / − zooms, Home restores the side view.
+            </p>
             <div class="cyl-scrub">
-              <label for="cyl-angle">Crank angle · <output id="cyl-deg">0°</output></label>
+              <label for="cyl-angle">Crank angle · <output id="cyl-deg">10°</output></label>
               <input id="cyl-angle" type="range" min="-360" max="360" value="10" step="1" />
+              <button id="cyl-inspect" type="button" class="button outline">
+                Inspect ignition
+              </button>
             </div>
-            <p id="cyl-values" class="cyl-values"></p>
-            <p id="cyl-status" class="note"></p>
+            <div class="cyl-instruments" id="cyl-values">
+              <div>
+                <strong>Candidate</strong><span id="cyl-value-candidate"></span>
+                <span id="cyl-event-candidate"></span><small id="cyl-metal-candidate"></small>
+              </div>
+              <div>
+                <strong>Road control</strong><span id="cyl-value-reference"></span>
+                <span id="cyl-event-reference"></span><small id="cyl-metal-reference"></small>
+              </div>
+            </div>
             <p class="note">
-              Slow motion at a modeled 2,000 rpm. Pressure and temperature follow the indicator
-              trace. From 180° to 360° the exhaust valve releases burned gas to a 1-atm manifold.
-              The flame surface and spray illustrate reduced-order combustion.
+              <b id="cyl-operating"></b>. Slow motion replays the load case. Valve lift, ignition
+              and exhaust temperature follow crank angle. Flame colour combines radical emission and
+              a soot-continuum estimate.
+              <a
+                href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE4.md#crank-angle-cutaway"
+                >Cutaway model and assumptions</a
+              >.
             </p>
           </div>
         </section>
