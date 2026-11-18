@@ -201,67 +201,77 @@
             <p class="note" id="anomalies"></p>
           </div>
         </section>
-        <section id="planetary" class="section">
+        <section id="bench" class="section">
           <div class="section-head">
             <div>
-              <div class="eyebrow">Stage 4 · closed-loop audit</div>
-              <h2>Planetary resource ceiling</h2>
+              <div class="eyebrow">Thermodynamic simulator</div>
+              <h2>Liquid blend laboratory</h2>
             </div>
-            <span id="planet-source" class="subtle"></span>
+            <span class="subtle">Runs locally · 1 mol% increments</span>
           </div>
-          <div class="panel planet-panel">
-            <div class="panel-title">
-              <label>Fuel and architecture<select id="planet-case"></select></label>
-              <strong id="planet-funnel"></strong>
+          <div class="bench-layout">
+            <div class="panel controls">
+              <label for="family">Liquid family</label
+              ><select id="family">
+                <option value="0">Alcohols &amp; water</option>
+                <option value="1">Ethanol &amp; dimethyl carbonate</option>
+                <option value="2">Waste-oil biodiesel</option>
+                <option value="3">1-Octanol</option>
+                <option value="dry" data-family="4">Dry alcohols &amp; dimethyl carbonate</option>
+                <option value="4">Measured reverse microemulsion</option>
+              </select>
+              <div id="fractions"></div>
+              <div class="stack-bar" id="mixture-bar"></div>
+              <label for="cycle">Comparison cycle</label
+              ><select id="cycle">
+                <option>Otto</option>
+                <option>Diesel</option>
+              </select>
+              <p class="note">
+                The microemulsion preset uses the published neutral octanol–ethanol–water
+                composition. The other water sliders describe dissolved water.
+              </p>
             </div>
-            <p id="planet-state" role="status"></p>
-            <p id="planet-peer" class="peer-mark" hidden>[PEER-REPRODUCED]</p>
-            <dl id="planet-metrics" class="weather-readings mini-dl"></dl>
-            <p id="planet-fate" class="note"></p>
-            <p id="planet-verify" class="note"></p>
-            <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE4.md"
-              >Audit boundaries and peer replay</a
-            >
+            <div class="panel bench-output">
+              <div class="panel-title">
+                <h3>Calculated blend</h3>
+                <span id="phase" class="pill"></span>
+              </div>
+              <div id="bench-numbers" class="number-grid"></div>
+              <svg
+                id="bench-pv"
+                viewBox="0 0 465 193"
+                role="img"
+                aria-label="Calculated blend indicator diagram"
+              ></svg>
+              <div id="bench-extra" class="details"></div>
+            </div>
           </div>
         </section>
-        <section id="cylinder" class="section">
+        <section id="race" class="section">
           <div class="section-head">
             <div>
-              <div class="eyebrow">Crank-angle combustion</div>
-              <h2>Cylinder cutaway</h2>
+              <div class="eyebrow">Virtual fuel pump</div>
+              <h2>50 L tank race</h2>
             </div>
-            <span class="subtle">Synchronized candidate and road control</span>
+            <span class="subtle">Level highway · steady speed</span>
           </div>
-          <div class="panel cylinder-panel">
-            <div class="cyl-controls">
-              <label>Candidate<select id="cyl-fuel"></select></label>
-              <label
-                >Reference cycle<select id="cyl-cycle">
-                  <option value="Otto">Otto · AI-95</option>
-                  <option value="Diesel">Diesel · road diesel</option>
+          <div class="panel race-panel">
+            <div class="race-controls">
+              <label>Vehicle class<select id="vehicle"></select></label
+              ><label
+                >Road speed<select id="speed">
+                  <option value="90">90 km/h</option>
+                  <option value="110" selected>110 km/h</option>
                 </select></label
-              >
-              <button id="cyl-play" class="button outline" type="button">Play cycle</button>
+              ><label>Lane A<select id="lane-a"></select></label
+              ><label>Lane B<select id="lane-b"></select></label>
             </div>
-            <div id="cyl-stage">
-              <canvas
-                id="cyl-canvas"
-                aria-label="Three-dimensional side-by-side cutaway cylinders"
-              ></canvas>
-              <div class="cyl-captions">
-                <span id="cyl-label"></span><span id="cyl-control"></span>
-              </div>
-            </div>
-            <div class="cyl-scrub">
-              <label for="cyl-angle">Crank angle · <output id="cyl-deg">0°</output></label>
-              <input id="cyl-angle" type="range" min="-360" max="359" value="10" step="1" />
-            </div>
-            <p id="cyl-values" class="cyl-values"></p>
-            <p id="cyl-status" class="note"></p>
+            <div class="lanes" id="lanes"></div>
             <p class="note">
-              Slow motion at a modeled 2,000 rpm. Pressure and temperature follow the indicator
-              trace. The flame surface and spray illustrate reduced-order combustion. Gas exchange
-              uses slider–crank geometry.
+              Engineering projections for a level road. Thermal scores and equilibrium NO describe
+              the cylinder. Actual range, knock and regulated tailpipe emissions require engine and
+              vehicle testing.
             </p>
           </div>
         </section>
@@ -273,6 +283,7 @@
             </div>
             <span class="subtle" id="weather-funnel"></span>
           </div>
+          <p class="note" id="weather-cold-summary"></p>
           <div class="weather-layout">
             <div class="panel controls weather-controls">
               <label for="weather-fuel">Discovered formula or reference</label
@@ -413,76 +424,71 @@
             >
           </p>
         </section>
-        <section id="bench" class="section">
+        <section id="planetary" class="section">
           <div class="section-head">
             <div>
-              <div class="eyebrow">Thermodynamic simulator</div>
-              <h2>Liquid blend laboratory</h2>
+              <div class="eyebrow">Stage 4 · closed-loop audit</div>
+              <h2>Planetary resource ceiling</h2>
             </div>
-            <span class="subtle">Runs locally · 1 mol% increments</span>
+            <span id="planet-source" class="subtle"></span>
           </div>
-          <div class="bench-layout">
-            <div class="panel controls">
-              <label for="family">Liquid family</label
-              ><select id="family">
-                <option value="0">Alcohols &amp; water</option>
-                <option value="1">Ethanol &amp; dimethyl carbonate</option>
-                <option value="2">Waste-oil biodiesel</option>
-                <option value="3">1-Octanol</option>
-                <option value="4">Measured reverse microemulsion</option>
-              </select>
-              <div id="fractions"></div>
-              <div class="stack-bar" id="mixture-bar"></div>
-              <label for="cycle">Comparison cycle</label
-              ><select id="cycle">
-                <option>Otto</option>
-                <option>Diesel</option>
-              </select>
-              <p class="note">
-                The microemulsion preset uses the published neutral octanol–ethanol–water
-                composition. The other water sliders describe dissolved water.
-              </p>
+          <div class="panel planet-panel">
+            <div class="panel-title">
+              <label>Fuel and architecture<select id="planet-case"></select></label>
+              <strong id="planet-funnel"></strong>
             </div>
-            <div class="panel bench-output">
-              <div class="panel-title">
-                <h3>Calculated blend</h3>
-                <span id="phase" class="pill"></span>
-              </div>
-              <div id="bench-numbers" class="number-grid"></div>
-              <svg
-                id="bench-pv"
-                viewBox="0 0 465 193"
-                role="img"
-                aria-label="Calculated blend indicator diagram"
-              ></svg>
-              <div id="bench-extra" class="details"></div>
-            </div>
+            <p id="planet-state" role="status"></p>
+            <p id="planet-peer" class="peer-mark" hidden>[PEER-REPRODUCED]</p>
+            <dl id="planet-metrics" class="weather-readings mini-dl"></dl>
+            <p id="planet-fate" class="note"></p>
+            <a
+              href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE4.md#environmental-comparison-baselines"
+              >Solar pathways and biodegradation evidence</a
+            >
+            <p id="planet-verify" class="note"></p>
+            <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE4.md"
+              >Audit boundaries and peer replay</a
+            >
           </div>
         </section>
-        <section id="race" class="section">
+        <section id="cylinder" class="section">
           <div class="section-head">
             <div>
-              <div class="eyebrow">Virtual fuel pump</div>
-              <h2>50 L tank race</h2>
+              <div class="eyebrow">Crank-angle combustion</div>
+              <h2>Cylinder cutaway</h2>
             </div>
-            <span class="subtle">Level highway · steady speed</span>
+            <span class="subtle">Synchronized candidate and road control</span>
           </div>
-          <div class="panel race-panel">
-            <div class="race-controls">
-              <label>Vehicle class<select id="vehicle"></select></label
-              ><label
-                >Road speed<select id="speed">
-                  <option value="90">90 km/h</option>
-                  <option value="110" selected>110 km/h</option>
+          <div class="panel cylinder-panel">
+            <div class="cyl-controls">
+              <label>Candidate<select id="cyl-fuel"></select></label>
+              <label
+                >Reference cycle<select id="cyl-cycle">
+                  <option value="Otto">Otto · AI-95</option>
+                  <option value="Diesel">Diesel · road diesel</option>
                 </select></label
-              ><label>Lane A<select id="lane-a"></select></label
-              ><label>Lane B<select id="lane-b"></select></label>
+              >
+              <button id="cyl-play" class="button outline" type="button">Play cycle</button>
             </div>
-            <div class="lanes" id="lanes"></div>
+            <div id="cyl-stage">
+              <canvas
+                id="cyl-canvas"
+                aria-label="Three-dimensional side-by-side cutaway cylinders"
+              ></canvas>
+              <div class="cyl-captions">
+                <span id="cyl-label"></span><span id="cyl-control"></span>
+              </div>
+            </div>
+            <div class="cyl-scrub">
+              <label for="cyl-angle">Crank angle · <output id="cyl-deg">0°</output></label>
+              <input id="cyl-angle" type="range" min="-360" max="360" value="10" step="1" />
+            </div>
+            <p id="cyl-values" class="cyl-values"></p>
+            <p id="cyl-status" class="note"></p>
             <p class="note">
-              Engineering projections for a level road. Thermal scores and equilibrium NO describe
-              the cylinder. Actual range, knock and regulated tailpipe emissions require engine and
-              vehicle testing.
+              Slow motion at a modeled 2,000 rpm. Pressure and temperature follow the indicator
+              trace. From 180° to 360° the exhaust valve releases burned gas to a 1-atm manifold.
+              The flame surface and spray illustrate reduced-order combustion.
             </p>
           </div>
         </section>

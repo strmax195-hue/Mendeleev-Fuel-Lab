@@ -69,16 +69,17 @@ globalThis.FuelCylinder = (() => {
     return (1 - Math.cos(a * rad) + 3.5 - Math.sqrt(3.5 ** 2 - s * s)) / 2;
   }
   function sample(lane, a) {
-    const { trace, c, cycle, ratio } = lane,
+    const { c, cycle, ratio } = lane,
+      trace = a >= 180 ? c.exhaust.path : lane.trace,
       piston = displacement(a),
       vol = 500 * (1 / (ratio - 1) + piston);
-    if (a < -180 || a >= 180)
+    if (a < -180)
       return {
         v: vol,
         p: 1.01325,
-        t: a < -180 ? c.chargeK : null,
+        t: c.chargeK,
         radial: 0,
-        phase: a < -180 ? "intake" : "exhaust",
+        phase: "intake",
         piston,
       };
     let lo = 0,
@@ -94,6 +95,7 @@ globalThis.FuelCylinder = (() => {
     const between = (i) => l[i] + (h[i] - l[i]) * f;
     // Diesel cutoff temperatures between the endpoints are unreported in the underlying trace.
     const t = l[3] == null || h[3] == null ? (a === l[0] ? l[3] : null) : between(3);
+    if (a >= 180) return { v: vol, p: between(2), t, radial: 0, phase: "exhaust", piston };
     const diesel = cycle === "Diesel",
       cutoff = c.cutoffDeg;
     const radius =

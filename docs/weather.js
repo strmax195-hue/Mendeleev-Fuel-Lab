@@ -69,7 +69,12 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
     );
     set(
       "weather-gates",
-      "Full envelope, stock system · " +
+      "Full envelope · " +
+        gate.installation.verdict +
+        (gate.installation.seals.length
+          ? " · " + gate.installation.seals.join("/").toUpperCase()
+          : "") +
+        ". " +
         (gate.failures.join(". ") || "No modeled failures") +
         ". " +
         (gate.reviews.length ? "Further evidence · " + gate.reviews.join(". ") + "." : ""),
@@ -175,6 +180,23 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
             report.funnel.rejected +
             " rejected"
         : "Matching Stage 2 checkpoint pending",
+    );
+    const cold = report?.coldScreen;
+    set(
+      "weather-cold-summary",
+      cold?.evaluatedSI
+        ? "At −35 °C, " +
+            cold.aboveLeanLimit +
+            " of " +
+            cold.evaluatedSI +
+            " liquid spark-ignition candidates reach the lean limit. Highest cranking index " +
+            fmt(cold.bestIndex, 3) +
+            " of 1.000. The dry carbonate grid peaks at " +
+            fmt(report.dryColdBound.upperIndex, 3) +
+            " across " +
+            fmt(report.dryColdBound.gridPoints) +
+            " compositions before phase exclusions."
+        : "",
     );
     choose();
   };

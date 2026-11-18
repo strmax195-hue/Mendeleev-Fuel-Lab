@@ -18,7 +18,7 @@ An autonomous, static observatory for **energy-efficient, lower-carbon automotiv
 
 ## Four-stage discovery funnel
 
-Stage 1 ranks the 1,000-liquid catalogue by range, net energy return and lifecycle emissions. Every tested formula gets a Stage 2 weather profile. The Pareto frontier and recorded discoveries enter the engineering shortlist automatically. Its second progress bar counts **full-envelope model passes / shortlisted candidates**. A candidate can lead on range and still fail at −35 °C. Both failed gates and unresolved evidence appear in its dossier. [Live Stage 2 index](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/stage2.json)
+Stage 1 ranks the 1,000-liquid catalogue by range, net energy return and lifecycle emissions. Every tested formula gets a Stage 2 weather profile. The Pareto frontier, recorded discoveries and any additional candidate clearing the physical screen enter the shortlist automatically. Stock hardware, compatible replacement seals and a qualified stainless circuit can each meet the material gate. Its second progress bar counts **full-envelope model passes / shortlisted candidates**. A candidate can lead on range and still fail at −35 °C. Both failed gates and unresolved evidence appear in its dossier. [Live Stage 2 index](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/stage2.json)
 
 The **car weather tester** reads 86 temperature points per fuel, reports liquid separation and freezing independently, and compares three fuel-system assemblies. Select a formula to inspect seal ratings, the four-volume RVP estimate, cranking volatility, hot-rail and inlet margins, bio-ester dose, wheel EROI and synthesis energy. Cooler air increases aerodynamic drag, fuel consumption and the upstream energy required for the same 100 km drive. “Drop-In” is a material-screen verdict for the selected assembly. Chemical and vehicle qualification require physical tests. [Open the weather tester](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#weather) · [Engineering assumptions and validation methods](STAGE2.md)
 
@@ -33,16 +33,16 @@ A **Golden Candidate** must clear the full modeled envelope on a named architect
 
 ## Energy return for a 50-litre tank
 
-First-generation pure liquids, including the two road controls. Range uses a 1,500 kg sedan at 110 km/h. Energy return divides tank LHV by external synthesis primary energy. Solar efficiency requires a declared complete light-to-fuel pathway.
+First-generation pure liquids, including the two road controls. Range uses a 1,500 kg sedan at 110 km/h. Energy return divides tank LHV by external synthesis primary energy. The solar column uses the declared crop route for ethanol and the named renewable comparison route for other stocks. [Solar and biodegradation baselines](STAGE4.md#environmental-comparison-baselines)
 
 | Fuel | MJ/L | Range, km | MJ out / MJ synthesis | Solar to tank | Lifecycle g CO₂e/km |
 |---|---:|---:|---:|---:|---:|
-| Waste-oil biodiesel | 32.70 | 1,017 | 4.68 | Unresolved | 18.0 |
-| Recovered-carbon isopropanol | 23.78 | 598 | 1.82 | Unresolved | 52.7 |
+| Waste-oil biodiesel | 32.70 | 1,017 | 4.68 | 0.090% · comparator | 18.0 |
+| Recovered-carbon isopropanol | 23.78 | 598 | 1.82 | 0.841% · comparator | 52.7 |
 | Bioethanol | 21.04 | 533 | 1.82 | 0.764% | 83.8 |
-| Dimethyl carbonate | 15.31 | 385 | 0.86 | Unresolved | 260.5 |
-| AI-95 gasoline | 33.04 | 820 | 7.14 | Unresolved | 202.6 |
-| Road diesel | 35.93 | 1,114 | 7.34 | Unresolved | 170.6 |
+| Dimethyl carbonate | 15.31 | 385 | 0.86 | 0.589% · comparator | 260.5 |
+| AI-95 gasoline | 33.04 | 820 | 7.14 | 0.675% · comparator | 202.6 |
+| Road diesel | 35.93 | 1,114 | 7.34 | 0.675% · comparator | 170.6 |
 
 ![Live range, energy return and climate Pareto frontier](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/assets/pareto.svg)
 
@@ -50,9 +50,12 @@ First-generation pure liquids, including the two road controls. Range uses a 1,5
 
 - **Periodic fuel map.** Click any of the 118 elements. The 17 curated entries describe constituent, air or vehicle-material roles. For a constituent, select a tested blend to inspect energy per litre relative to both road fuels and the balanced exhaust inventory.
 - **Pareto frontier explorer.** Inspect net energy return against range. Colour represents lifecycle greenhouse gases. The frontier contains points for which improving one objective entails a trade-off in another.
-- **3D cylinder cutaway.** Scrub or play the same crank angle for a selected blend and its matched road control, with piston travel, spray, thermal glow and a premixed or mixing-controlled front. [Open the synchronized cutaway](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#cylinder)
-- **Liquid blend laboratory.** Adjust two independent fractions in the alcohol–water ternary or select an admitted binary, pure liquid or measured microemulsion. The local solver calculates the charge temperature, adiabatic flame temperature, bubble pressure, peak cylinder pressure, indicated efficiency and P–V trace.
+- **Liquid blend laboratory.** Adjust two independent fractions in the hydrous alcohol or dry alcohol–DMC ternary or select an admitted binary, pure liquid or measured microemulsion. The local solver calculates the charge temperature, adiabatic flame temperature, bubble pressure, peak cylinder pressure, indicated efficiency and P–V trace.
 - **50 L tank race.** Compare two references, surveyed candidates or the current bench blend in a sedan, SUV or heavy truck at 90 or 110 km/h. All three vehicles use the same usable 50 L for a controlled comparison.
+- **Stage 2 weather and materials.** Inspect the liquid envelope, lean-limit index and the fitted seal and wetted-metal options.
+- **Stage 3 calibration.** Select an architecture to inspect its ECU grid and WLTC trace.
+- **Stage 4 planetary audit.** Compare renewable routes and compartment-specific spill half-lives, then inspect the ecological gates.
+- **3D cylinder cutaway.** Scrub or play the same crank angle for a selected blend and its matched road control, with piston travel, spray and crank-resolved exhaust pressure and temperature. [Open the synchronized cutaway](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#cylinder)
 
 ## Scientific scope
 

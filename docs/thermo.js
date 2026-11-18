@@ -181,6 +181,29 @@
       cycle: keys.length === 1 ? M.stocks[keys[0]].cycle : "Otto",
     };
   }
+  function environmentalBaselines(f) {
+    const organic = f.terms
+      .filter(([s]) => s.screenDt50Days)
+      .map(([s, x]) => [x * mw(s.atoms), s.screenDt50Days]);
+    function halfLife(i) {
+      const target = sum(organic.map(([m]) => m)) / 2;
+      let lo = Math.min(...organic.map(([, d]) => d[i])),
+        hi = Math.max(...organic.map(([, d]) => d[i]));
+      for (let j = 0; j < 50; j++) {
+        const mid = (lo + hi) / 2;
+        if (sum(organic.map(([m, d]) => m * 2 ** (-mid / d[i]))) > target) lo = mid;
+        else hi = mid;
+      }
+      return (lo + hi) / 2;
+    }
+    const sunlight = sum(f.terms.map(([s, x]) => x * s.comparisonSolarMjMol));
+    return {
+      solarPct: (100 * f.lhv) / 1e6 / sunlight,
+      routes: [...new Set(f.terms.map(([s]) => s.comparisonRoute))].sort(),
+      soilDays: halfLife(0),
+      waterDays: halfLife(1),
+    };
+  }
   function charge(f, air) {
     const na = sum(air),
       a = mixtureCoefficients(air)[0],
@@ -213,6 +236,119 @@
       throw Error("Isentropic stroke did not converge");
     };
   }
+  // Frozen composition in a 0.5 L cylinder with a bidirectional exhaust poppet.
+  function exhaustStroke(products, endT, v1, v2, volume) {
+    const np = sum(products),
+      frac = products.map((n) => n / np);
+    const fit = mixtureCoefficients(frac),
+      molarKg = dot(frac, gasMass) / 1000;
+    const props = (t) => raw(fit[Number(t >= 1000)], t);
+    const scale = 0.0005 / (v1 - v2),
+      actualV = (deg) => volume(deg) * scale;
+    const initialMol = np * scale,
+      pEnd = (initialMol * R * endT) / actualV(180);
+    // A frozen isentropic expansion to the manifold estimates the return-gas boundary.
+    const sEnd = props(endT)[2];
+    const portK = root(
+      (t) => props(t)[2] - sEnd - R * Math.log(P0 / pEnd),
+      200,
+      endT,
+      endT * 0.8,
+      1e-9,
+    );
+    const rpm = 2000,
+      wallK = 450,
+      stroke = 0.086,
+      valveM = 0.03,
+      liftM = 0.008,
+      cd = 0.65;
+    const area = 0.0005 / stroke,
+      bore = Math.sqrt((4 * area) / Math.PI);
+    const rad = Math.PI / 180,
+      speed = (2 * stroke * rpm) / 60,
+      secPerDeg = 1 / (6 * rpm);
+    const u = (t) => props(t)[1] - R * t;
+
+    // State = temperature, moles, boundary work, wall heat, signed flow enthalpy,
+    // gross expelled moles and gross returned moles. All fluxes are per crank degree.
+    function rates(angle, state) {
+      const [t, n] = state,
+        a = rad * angle,
+        v = actualV(angle);
+      const dv =
+        0.00025 * rad * Math.sin(a) * (1 + Math.cos(a) / Math.sqrt(3.5 ** 2 - Math.sin(a) ** 2));
+      const p = (n * R * t) / v,
+        gas = props(t),
+        out = p >= P0;
+      const upK = out ? t : portK,
+        up = out ? gas : props(portK);
+      const gamma = up[0] / (up[0] - R);
+      const pressureRatio = Math.max(
+        Math.min(p, P0) / Math.max(p, P0),
+        (2 / (gamma + 1)) ** (gamma / (gamma - 1)),
+      );
+      const flowFactor = Math.sqrt(
+        Math.max(
+          0,
+          ((2 * gamma) / (gamma - 1)) *
+            pressureRatio ** (2 / gamma) *
+            (1 - pressureRatio ** ((gamma - 1) / gamma)),
+        ),
+      );
+      const lift = liftM * Math.max(0, Math.sin((angle - 180) * rad));
+      const opening = Math.PI * valveM * Math.min(valveM / 4, lift);
+      const flow =
+        ((out ? 1 : -1) * cd * opening * Math.max(p, P0) * flowFactor * secPerDeg) /
+        Math.sqrt(R * molarKg * upK);
+      // Hohenberg (SAE 790825), V in m³, pressure in bar, mean piston speed in m/s.
+      const h = 130 * v ** -0.06 * (p / 1e5) ** 0.8 * t ** -0.4 * (speed + 1.4) ** 0.8;
+      const wall = h * (2 * area + (Math.PI * bore * v) / area) * (t - wallK) * secPerDeg;
+      const work = p * dv;
+      return [
+        (-work - wall - flow * (up[1] - (gas[1] - R * t))) / (n * (gas[0] - R)),
+        -flow,
+        work,
+        wall,
+        flow * up[1],
+        Math.max(0, flow),
+        Math.max(0, -flow),
+      ];
+    }
+    let state = [endT, initialMol, 0, 0, 0, 0, 0];
+    const path = [[180, actualV(180) * 1e6, pEnd / 1e5, endT, initialMol]];
+    const dt = 0.25,
+      shift = (k, d) => state.map((x, i) => x + d * k[i]);
+    for (let angle = 180; angle < 360; angle += dt) {
+      const k1 = rates(angle, state),
+        k2 = rates(angle + dt / 2, shift(k1, dt / 2));
+      const k3 = rates(angle + dt / 2, shift(k2, dt / 2)),
+        k4 = rates(angle + dt, shift(k3, dt));
+      state = state.map((x, i) => x + (dt * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])) / 6);
+      if (Number.isInteger(angle + dt)) {
+        const v = actualV(angle + dt),
+          [t, n] = state;
+        path.push([angle + dt, v * 1e6, (n * R * t) / v / 1e5, t, n]);
+      }
+    }
+    const [t, n, workJ, wallJ, outflowEnthalpyJ, expelledMol, returnedMol] = state;
+    return {
+      path,
+      rpm,
+      wallK,
+      portK,
+      preReleaseK: endT,
+      preReleaseBar: pEnd / 1e5,
+      initialMol,
+      remainingMol: n,
+      expelledMol,
+      returnedMol,
+      wallJ,
+      workJ,
+      outflowEnthalpyJ,
+      energyResidualJ: initialMol * u(endT) - n * u(t) - workJ - wallJ - outflowEnthalpyJ,
+    };
+  }
+
   function cycle(f, kind, trace = false, step = 2) {
     const diesel = kind === "Diesel",
       ratio = diesel ? 17 : 10.5,
@@ -294,7 +430,10 @@
       knockProxy: t2 / T0,
       lambda,
     };
-    if (trace) result.pv = path.map(([deg, v, p, t]) => [deg, (v / (v1 - v2)) * 500, p / 1e5, t]);
+    if (trace) {
+      result.pv = path.map(([deg, v, p, t]) => [deg, (v / (v1 - v2)) * 500, p / 1e5, t]);
+      result.exhaust = exhaustStroke(peak.n, endT, v1, v2, volume);
+    }
     return result;
   }
   function drive(row, vehicle = "Sedan", speed = 110, kind = row.preferred) {
@@ -348,6 +487,7 @@
       lhvJ: f.lhv,
       synthesisMjKg: f.synthesis / f.mass,
       netEnergyReturn: f.lhv / 1e6 / f.synthesis,
+      baselines: environmentalBaselines(f),
       solarToTankPct: f.solarInput === null ? null : (100 * f.lhv) / 1e6 / f.solarInput,
       elementPpm: Object.fromEntries(
         M.elements

@@ -156,7 +156,12 @@
           (k) => Number.isFinite(r.cycles?.[k]?.eta) && r.cycles[k].eta > 0 && r.cycles[k].eta < 1,
         ) ||
         !r.atoms ||
-        !r.exhaust
+        !r.exhaust ||
+        !["solarPct", "soilDays", "waterDays"].every(
+          (k) => Number.isFinite(r.baselines?.[k]) && r.baselines[k] > 0,
+        ) ||
+        !Array.isArray(r.baselines.routes) ||
+        !r.baselines.routes.every((s) => typeof s === "string")
       )
         return false;
       try {
@@ -186,8 +191,12 @@
       ["50 L range", fmt(r.range) + " km"],
       ["Net energy return", fmt(r.netEnergyReturn, 2) + " MJ/MJ"],
       [
-        "Solar to tank",
-        r.solarToTankPct === null ? "Pathway unresolved" : fmt(r.solarToTankPct, 3) + "%",
+        r.solarToTankPct === null ? "Solar-to-tank comparator" : "Solar to tank",
+        fmt(r.solarToTankPct ?? r.baselines.solarPct, 3) + "% · " + r.baselines.routes.join(" + "),
+      ],
+      [
+        "Soil / water half-life · baseline",
+        fmt(r.baselines.soilDays, 1) + " / " + fmt(r.baselines.waterDays, 1) + " days",
       ],
       ["Synthesis energy", fmt(r.synthesisMj100, 1) + " MJ/100 km"],
       ["Lifecycle", fmt(r.climate, 1) + " g CO₂e/km"],
@@ -408,13 +417,16 @@
   }
   let fractions = { eth: 70, ipa: 20, water: 10 };
   function buildSliders(reset) {
-    const fixed = $("family").value === "4";
-    const family = fixed ? Object.keys(M.microemulsion) : M.families[Number($("family").value)];
+    const menu = $("family");
+    const fixed = menu.value === "4";
+    const family = fixed
+      ? Object.keys(M.microemulsion)
+      : M.families[menu.selectedOptions[0].dataset.family ?? menu.value];
     if (reset)
       fractions = fixed
         ? { ...M.microemulsion }
         : family.length === 3
-          ? { eth: 70, ipa: 20, water: 10 }
+          ? { [family[0]]: 70, [family[1]]: 20, [family[2]]: 10 }
           : family.length === 2
             ? { eth: 80, dmc: 20 }
             : { [family[0]]: 100 };

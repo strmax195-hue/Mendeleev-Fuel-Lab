@@ -71,6 +71,7 @@ def fuel_map(state, stage2=None, stage3=None, stage4=None):
             )
         )
     if stage2 is not None:
+        cold = stage2.get("coldScreen")
         count = len(stage2["nominated"])
         passed = stage2["funnel"]["passed"]
         b.extend(
@@ -93,7 +94,11 @@ def fuel_map(state, stage2=None, stage3=None, stage4=None):
                 txt(
                     26,
                     562,
-                    f'−35 to +50 °C  ·  {count} shortlisted and screened  ·  {stage2["funnel"]["rejected"]} rejected  ·  {stage2["funnel"]["review"]} in review',
+                    (
+                        f'−35 °C  ·  {cold["aboveLeanLimit"]}/{cold["evaluatedSI"]} liquid SI above lean limit  ·  best {cold["bestIndex"]:.3f} / 1.000'
+                        if cold and cold["evaluatedSI"]
+                        else f'−35 to +50 °C  ·  {count} shortlisted  ·  {stage2["funnel"]["review"]} in review'
+                    ),
                     13,
                     "mono",
                 ),

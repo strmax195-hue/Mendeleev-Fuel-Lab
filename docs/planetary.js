@@ -68,15 +68,23 @@ globalThis.FuelPlanetary = function ({ $, make, set, fmt, lines, option, feedRoo
         ["Annual fuel", amount(f.litresYear) + " L"],
         ["Net energy return", fmt(f.netEnergyReturn, 3) + " MJ/MJ"],
         [
-          "Solar to tank",
-          f.solarToTankPct === null ? "Pathway unresolved" : fmt(f.solarToTankPct, 3) + "%",
+          f.solarToTankPct === null ? "Solar-to-tank comparator" : "Solar to tank",
+          fmt(f.solarToTankPct ?? f.comparisonSolarPct, 3) +
+            "% · " +
+            f.comparisonRoutes.join(" + "),
         ],
         ["Water equivalent / annual allocation", fmt(f.annualWaterEquivalent.usePct, 3) + "%"],
         ["Crop carbon / annual allocation", fmt(f.annualCropCarbon.usePct, 3) + "%"],
         ["Gross CO₂ return", amount(f.co2ReturnKgYear) + " kg/year"],
         ["Atomic mass residual", b.massResidualKg + " kg/L"],
         ["Spill oxygen demand", fmt(spill.theoreticalOxygenDemandKgPerKg, 3) + " kg O₂/kg"],
-        ["Field soil / surface-water half-life", "Unverified"],
+        [
+          "Soil / water half-life · baseline",
+          fmt(spill.baselineSoilDt50Days, 1) +
+            " / " +
+            fmt(spill.baselineWaterDt50Days, 1) +
+            " days",
+        ],
         [
           "Aquifer organic half-life",
           spill.aquiferOrganicDt50Days
@@ -89,9 +97,11 @@ globalThis.FuelPlanetary = function ({ $, make, set, fmt, lines, option, feedRoo
         "Renewable supply · " +
           p.gates.resourceSupply +
           ". Soil and water toxicity · " +
-          p.gates.soilAndWater +
+          (p.gates.soilAndWater === "unverified"
+            ? "field exposure data required"
+            : p.gates.soilAndWater) +
           ". Whole-path ozone depletion · " +
-          p.gates.ozone +
+          (p.gates.ozone === "unverified" ? "pathway inventory required" : p.gates.ozone) +
           ". Zero greenhouse byproducts · " +
           p.gates.greenhouseByproducts +
           ". Actual material recovery requires measurements.",

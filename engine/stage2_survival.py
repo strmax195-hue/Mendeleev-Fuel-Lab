@@ -16,6 +16,7 @@ from .materials_db import (
     at_temperature,
     chemical_ratings,
     retrofit,
+    qualified_installation,
 )
 from .stage2_inputs import (
     DELIVERY_MJ,
@@ -224,6 +225,43 @@ def flash_pressure(moles, interactions):
     raise ArithmeticError("Headspace flash did not converge")
 
 
+def cranking_index(partial):
+    """Le Chatelier sum of combustible partial pressures relative to the lean limits."""
+    return sum(
+        p / PRESSURE * 100 / PROPERTIES[k].lfl for k, p in partial.items() if PROPERTIES[k].lfl
+    )
+
+
+def dry_cold_index(parts, *, check_phase):
+    """One-temperature dry-carbonate pre-screen for prioritising Stage 1 visits."""
+    if parts.keys() != {"eth", "ipa", "dmc"}:
+        raise ValueError("Expected a dry alcohol-carbonate ternary")
+    validate(parts)
+    x = {k: n / 100 for k, n in parts.items()}
+    t = min(TEMPS)
+    kelvin = t + 273.15
+    interactions = pairs(x)
+    gamma = activity(x, interactions, kelvin)
+    if check_phase and phase_mask(x, gamma, t, split_below(x, interactions)) & (SPLIT | SOLID):
+        return None
+    return cranking_index({k: x[k] * gamma[k] * saturation(k, kelvin) for k in x})
+
+
+@lru_cache(maxsize=1)
+def dry_cold_bound():
+    """Optimistic maximum over the entire 1 mol% simplex before solid/LLE exclusion."""
+    points = 0
+    best, best_parts = 0.0, {}
+    for dmc in range(1, 99):
+        for ipa in range(1, 100 - dmc):
+            p = {"eth": 100 - dmc - ipa, "ipa": ipa, "dmc": dmc}
+            points += 1
+            value = dry_cold_index(p, check_phase=False)
+            if value > best:
+                best, best_parts = value, p
+    return {"gridPoints": points, "upperIndex": round(best, 7), "parts": best_parts}
+
+
 def screen(parts):
     """Temperature profile, compatibility and energy inventory, independent of a road cycle."""
     validate(parts, reference=True)
@@ -243,16 +281,7 @@ def screen(parts):
             weather.append([phase, None, None, None])
             continue
         partial = {k: xi * gamma[k] * saturation(k, kelvin) for k, xi in x.items()}
-        # Le Chatelier sum over combustible vapours in air; 1 is the lean limit.
-        cold = (
-            sum(
-                p / PRESSURE * 100 / PROPERTIES[k].lfl
-                for k, p in partial.items()
-                if PROPERTIES[k].lfl
-            )
-            if not ci
-            else None
-        )
+        cold = None if ci else cranking_index(partial)
         mu = math.exp(sum(xi * log_viscosity(k, kelvin) for k, xi in x.items()))
         weather.append(
             [
@@ -349,8 +378,9 @@ def gate(s, account, reference_mj, weather_limits=None):
         reviews.append("Hot pressure margin unavailable in the selected phase state")
     elif min(RAIL_PRESSURE, PRESSURE - INLET_LOSS) <= hot[1]:
         fails.append("Hot fuel supply has no positive pressure margin")
-    if s["retrofit"]["stock"] == INCOMPATIBLE:
-        fails.append("Stock wetted metals or seal system unsuitable / unqualified")
+    installation = qualified_installation(s["chemical"], TEMPS)
+    if installation["verdict"] == INCOMPATIBLE:
+        fails.append("No qualified metal and seal assembly across the temperature envelope")
     if cold[3] is not None and cold[3] > 30.0:
         fails.append("Cold pump viscosity exceeds the 30 mPa·s circuit scenario")
     if s["cycle"] == "Diesel":
@@ -377,6 +407,7 @@ def gate(s, account, reference_mj, weather_limits=None):
         reviews.append("Pathway / ester supply needs capacity evidence")
     return {
         "status": "rejected" if fails else "review" if reviews else "passed",
+        "installation": installation,
         "failures": fails,
         "reviews": reviews,
     }

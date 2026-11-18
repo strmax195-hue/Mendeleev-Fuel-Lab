@@ -17,7 +17,8 @@ from unittest.mock import patch
 from engine.biosphere_cycle import amounts, atom_ledger, audit, WEIGHTS
 from engine.discovery_solver import catalogue, run
 from engine.elements_db import MODEL
-from engine.fuel_simulator import ROOT
+from engine.pathway_baselines import DT50_DAYS, mixture_dt50
+from engine.fuel_simulator import ROOT, simulate
 from engine.reservoirs import AIR_PPM, OCEAN_PPM
 from engine.stage3_publish import bytes_for, digest, projection
 from engine.stage4_planetary import (
@@ -112,6 +113,30 @@ class PlanetaryPhysics(unittest.TestCase):
         self.assertIsNone(mixture["soilDt50Days"])
         self.assertGreater(mixture["aquiferOrganicKgPerKgAt28Days"][1], 0.5)
         self.assertEqual(mixture["persistentSoilWaterToxicity"], "unverified")
+
+    def test_environmental_baselines_cover_every_stock_and_match_browser(self):
+        self.assertEqual(set(MODEL["stocks"]), set(DT50_DAYS))
+        self.assertIsNone(mixture_dt50({"water": 1}, 0))
+        stocks = [{k: 100} for k in MODEL["stocks"] if k != "water"]
+        blends = [{"eth": 30, "oct": 25, "water": 45}, {"eth": 34, "ipa": 44, "dmc": 22}]
+        for r in simulate(stocks + blends, reference=True):
+            parts, b = r["parts"], r["baselines"]
+            field = resources(parts, 0, 5)
+            self.assertAlmostEqual(field["comparisonSolarPct"], b["solarPct"], places=6)
+            self.assertEqual(b["routes"], field["comparisonRoutes"])
+            spill = audit(parts)["spill"]
+            self.assertAlmostEqual(spill["baselineWaterDt50Days"], b["waterDays"], places=6)
+            self.assertAlmostEqual(spill["baselineSoilDt50Days"], b["soilDays"], places=6)
+            self.assertGreater(b["solarPct"], 0)
+            self.assertLess(b["solarPct"], 100)
+        self.assertAlmostEqual(resources({"ai95": 100}, 0, 5)["comparisonSolarPct"], 0.675)
+        mass = {"eth": 0.2, "oct": 0.3, "water": 0.5}
+        for c in [0, 1]:
+            t = mixture_dt50(mass, c)
+            self.assertAlmostEqual(
+                sum(m * 2 ** (-t / DT50_DAYS[k][c]) for k, m in mass.items() if k != "water"), 0.25
+            )
+        self.assertGreater(audit({"eth": 100}, 0.015)["spill"]["baselineWaterDt50Days"], 15)
 
     def test_no_financial_dependencies_in_code_or_published_schemas(self):
         forbidden = re.compile(

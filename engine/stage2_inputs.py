@@ -37,6 +37,8 @@ PAIRS = {
     ("eth", "water"): 1.10,
     ("ipa", "water"): 1.55,
     ("dmc", "eth"): 0.55,
+    # Fitted to isobaric x-y-T in ThermoML 10.1016/j.jct.2004.09.009 (STAGE2.md).
+    ("dmc", "ipa"): 1.18450,
     ("eth", "oct"): 0.45,
     ("oct", "water"): 2.65,
     ("b100", "eth"): 1.60,

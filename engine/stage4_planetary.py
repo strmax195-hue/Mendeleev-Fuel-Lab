@@ -30,7 +30,12 @@ NPP_SHARE = 0.01
 @lru_cache(maxsize=1)
 def model_hash():
     h = hashlib.sha256(calibration_hash().encode("ascii"))
-    for file in ("stage4_planetary.py", "biosphere_cycle.py", "reservoirs.py"):
+    for file in (
+        "stage4_planetary.py",
+        "biosphere_cycle.py",
+        "reservoirs.py",
+        "pathway_baselines.py",
+    ):
         h.update((ROOT / "engine" / file).read_text(encoding="utf-8").encode())
     return h.hexdigest()
 
@@ -112,6 +117,10 @@ def resources(parts, dose, litres100, fleet=FLEET, km_year=KM_YEAR):
         "waterEquivalentPctOceanStock": round(100 * bound_water / OCEAN_WATER_KG, 10),
         "netEnergyReturn": round(mj / synthesis, 7),
         "solarToTankPct": solar,
+        "comparisonSolarPct": round(
+            100 * mj / sum(float(n) * STOCKS[k]["comparisonSolarMjMol"] for k, n in mol.items()), 7
+        ),
+        "comparisonRoutes": sorted({STOCKS[k]["comparisonRoute"] for k in mol}),
         "fuelEnergyMjYear": round(mj * litres),
         "synthesisMjYear": round(synthesis * litres),
         "resourceStatus": "review" if water["within"] and crop["within"] else "exceeds",

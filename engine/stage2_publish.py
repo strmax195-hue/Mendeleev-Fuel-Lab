@@ -17,6 +17,7 @@ from .stage2_survival import (
     ROAD_COLUMNS,
     ROAD_REFERENCE_C,
     canonical,
+    dry_cold_bound,
     gate,
     model_hash,
     road_profile,
@@ -62,9 +63,7 @@ def build(state, previous=None, load_row=None, supplied=None):
     )
     # The shortlist is historical even when newer scientific inputs require a rescreen.
     known = {r["id"] for r in state["results"]}
-    retained = (
-        previous.get("nominated", []) if previous.get("stage1Model") == state["model"] else []
-    )
+    retained = previous.get("nominated", [])
     nominated = sorted(
         (set(retained) & known) | set(state["frontier"]) | {e["id"] for e in state["records"]}
     )
@@ -91,6 +90,14 @@ def build(state, previous=None, load_row=None, supplied=None):
         }
         rows[key] = record
         hashes[key] = sha(canonical(record) + "\n")
+    crank = [(rows[k]["screen"]["weather"][0][2], k) for k in sorted(known)]
+    available = [(x, k) for x, k in crank if x is not None]
+    best = max(available, default=(None, None))
+    # Any physically passing surveyed candidate can enter calibration, including
+    # feasible points dominated by the three Stage 1 objectives.
+    nominated = sorted(set(nominated) | {k for k in known if rows[k]["gate"]["status"] == "passed"})
+    if best[1] is not None:
+        nominated = sorted(set(nominated) | {best[1]})
     counts = {
         status: sum(rows[k]["gate"]["status"] == status for k in nominated)
         for status in ("passed", "review", "rejected")
@@ -103,6 +110,13 @@ def build(state, previous=None, load_row=None, supplied=None):
         "tested": state["tested"],
         "nominated": nominated,
         "funnel": counts,
+        "dryColdBound": dry_cold_bound(),
+        "coldScreen": {
+            "evaluatedSI": len(available),
+            "aboveLeanLimit": sum(x >= 1 for x, _ in available),
+            "bestIndex": best[0],
+            "bestId": best[1],
+        },
         "entries": hashes,
         "minC": min(TEMPS),
         "maxC": max(TEMPS),
@@ -131,13 +145,15 @@ def certificate(record, stage1_model):
         "compression-ignition soak test required" if s["cycle"] == "Diesel" else reading(cold[2], 3)
     )
     stock = s["retrofit"]["stock"]
+    installation = g["installation"]
     sector = sorted(catalogue()).index(record["id"])
     return "\n".join(
         [
             "## Stage 2 survival certificate",
             "",
             f"Computational outcome **{g['status'].upper()}** on the −35 to +50 °C grid. "
-            f"Stock material verdict **{stock}**. Laboratory and OEM validation are outstanding.",
+            f"Stock material verdict **{stock}**. Full-envelope installation **{installation['verdict']}** "
+            f"({', '.join(installation['seals']).upper() or 'none'}). Laboratory and OEM validation are outstanding.",
             "",
             "| Screen | Result |",
             "|---|---|",

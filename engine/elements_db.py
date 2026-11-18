@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .fuel_quality import QUALITY
+from .pathway_baselines import DT50_DAYS, SOLAR_ROUTES, solar_input
 from .stage2_inputs import PROPERTIES, GRID_PRIMARY
 from .reservoirs import (
     AIR_PPM,
@@ -211,14 +212,26 @@ STOCKS = {
         "Diesel",
     ),
 }
+ATOMIC_WEIGHTS = {"C": 12.0107, "H": 1.00794, "O": 15.9994, "N": 14.0067}
 for key, stock in STOCKS.items():
     route = PROPERTIES[key]
     stock["synthesisMjKg"] = route.other_mj + 3.6 * GRID_PRIMARY * route.kwh
+    atoms = stock["atoms"]
+    kg_mol = sum(ATOMIC_WEIGHTS[e] * n for e, n in atoms.items()) / 1000
+    carbon = atoms.get("C", 0)
+    net_mj = (
+        stock["hf"] - carbon * CEA["CO2"]["hf_j_mol"] - atoms["H"] / 2 * CEA["H2O"]["hf_j_mol"]
+    ) / 1e6
+    stock["comparisonSolarMjMol"] = solar_input(
+        key, carbon, net_mj, kg_mol * stock["synthesisMjKg"]
+    )
+    stock["comparisonRoute"] = SOLAR_ROUTES[key]
+    stock["screenDt50Days"] = DT50_DAYS[key]
     # Solar origin is attributable only for the declared crop route and treatment water.
     stock["solarRoute"] = {"eth": "crop", "water": "treatment"}.get(key)
 
 REFERENCES = ("ai95", "diesel")
-FAMILIES = [("eth", "ipa", "water"), ("eth", "dmc"), ("b100",), ("oct",)]
+FAMILIES = [("eth", "ipa", "water"), ("eth", "dmc"), ("b100",), ("oct",), ("eth", "ipa", "dmc")]
 # Neutral reverse-aggregate point in ACS Central Science, DOI 10.1021/acscentsci.6b00116.
 MICROEMULSION = {"eth": 30, "oct": 25, "water": 45}
 VEHICLES = {
@@ -240,7 +253,7 @@ MODEL = dict(
     microemulsion=MICROEMULSION,
     refs=REFERENCES,
     vehicles=VEHICLES,
-    weights={"C": 12.0107, "H": 1.00794, "O": 15.9994, "N": 14.0067},
+    weights=ATOMIC_WEIGHTS,
     abundance=PPM,
     speeds=[90, 110],
 )

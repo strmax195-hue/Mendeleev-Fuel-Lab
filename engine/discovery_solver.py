@@ -20,7 +20,8 @@ def identity(parts):
 
 
 @lru_cache(maxsize=1)
-def catalogue():
+def original_grid():
+    """Original ordered catalogue. Its compositions also validate historical checkpoints."""
     possible = []
     for water in range(21):
         for ipa in range(101 - water):
@@ -32,7 +33,28 @@ def catalogue():
     edges = [p for p in possible if len(p) < 3] + [MICROEMULSION]
     interior = [p for p in possible if len(p) == 3]
     needed = TOTAL - len(edges)
-    selected = edges + [interior[i * (len(interior) - 1) // (needed - 1)] for i in range(needed)]
+    return edges + [interior[i * (len(interior) - 1) // (needed - 1)] for i in range(needed)]
+
+
+@lru_cache(maxsize=1)
+def catalogue():
+    selected = original_grid().copy()
+    # Preserve the original boundaries and first grid visits while sharing the
+    # 1,000-point budget between the hydrous and dry alcohol ternaries. Reuse
+    # well-interior hydrous slots late in the original coprime traversal.
+    slots = [(i * 383) % TOTAL for i in range(TOTAL)]
+    slots = [
+        i
+        for i in slots
+        if len(selected[i]) == 3 and "ipa" in selected[i] and min(selected[i].values()) >= 8
+    ][-160:]
+    dry = [
+        {"eth": 100 - dmc - ipa, "ipa": ipa, "dmc": dmc}
+        for dmc in range(1, 99)
+        for ipa in range(1, 100 - dmc)
+    ]
+    for j, slot in enumerate(slots):
+        selected[slot] = dry[j * (len(dry) - 1) // (len(slots) - 1)]
     for p in selected:
         validate(p)
     catalog = {identity(p): p for p in selected}
@@ -42,9 +64,26 @@ def catalogue():
 
 
 @lru_cache(maxsize=1)
+def dry_visit_order():
+    from .stage2_survival import dry_cold_index
+
+    cold = {
+        k: dry_cold_index(p, check_phase=True)
+        for k, p in catalogue().items()
+        if p.keys() == {"eth", "ipa", "dmc"}
+    }
+    return sorted(cold, key=lambda k: (-(cold[k] or 0), k))
+
+
+@lru_cache(maxsize=1)
 def fingerprint():
     h = hashlib.sha256(model_script().encode())
-    for path in ("docs/thermo.js", "engine/discovery_solver.py"):
+    for path in (
+        "docs/thermo.js",
+        "engine/discovery_solver.py",
+        "engine/stage2_survival.py",
+        "engine/stage2_inputs.py",
+    ):
         h.update((ROOT / path).read_bytes())
     h.update("\n".join(catalogue()).encode())
     return h.hexdigest()[:16]
@@ -86,6 +125,9 @@ def select_batch(rows, batch, generation):
         if key in catalog and key not in done and len(picks) < batch:
             picks.setdefault(key, catalog[key])
 
+    # One visit per batch targets the most volatile untested dry ternary
+    # still predicted liquid at −35 °C. Only a full simulation counts as a visit.
+    probe = (k for k in dry_visit_order() if k not in done)
     if not rows:
         for p in (
             {"eth": 100},
@@ -99,7 +141,9 @@ def select_batch(rows, batch, generation):
             MICROEMULSION,
         ):
             add(identity(p))
+        add(next(probe))
     else:
+        add(next(probe, None))
         parents = frontier([r for r in rows if len(r["parts"]) > 1], objectives)
         parents.sort(key=lambda r: (-r["index"], r["id"]))
         queue = deque(parents)
@@ -241,22 +285,37 @@ def run(output, batch):
     checkpoint = output / "data/state.json"
     state = json.loads(checkpoint.read_text()) if checkpoint.exists() else new_state()
     previous = state["tested"]
-    migrated = state.get("schema") == 1 and state.get("model") == "7550aae150609a34"
+    migrated = (state.get("schema"), state.get("model")) in {
+        (1, "7550aae150609a34"),
+        (2, "557c04fef7a3e4d2"),
+    }
     events = []
     if migrated:
         # Recompute the actual tested membership under the new objective. Never copy old scores.
         legacy = state
         ids = [r["id"] for r in legacy["results"]]
+        current_grid = catalogue()
+        old_ids = {identity(p) for p in original_grid()}
         if (
             len(ids) != previous
             or len(set(ids)) != previous
             or legacy["total"] != TOTAL
-            or any(k not in catalogue() for k in ids)
+            or any(k not in current_grid and k not in old_ids for k in ids)
         ):
             raise ValueError("Invalid source checkpoint for the physical resurvey")
+        if any(k not in current_grid for k in ids):
+            # Other deployments may have already visited a replaced interior slot.
+            # Archive the complete population and count only current-grid visits as progress.
+            archive = checkpoint.parent / "history" / legacy["model"] / "state.json"
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            archive.write_bytes(checkpoint.read_bytes())
         state = new_state()
         events.extend(
-            incorporate(state, simulate([catalogue()[k] for k in ids]), legacy["generation"])
+            incorporate(
+                state,
+                simulate([current_grid[k] for k in ids if k in current_grid]),
+                legacy["generation"],
+            )
         )
         current = {e["dossier"] for e in events}
         for e in legacy["records"]:
@@ -264,7 +323,7 @@ def run(output, batch):
             path = f"dossiers/{kind}-{k}.md"
             if k not in ids or kind not in {"pareto", "zero-tailpipe"} or path != e["dossier"]:
                 raise ValueError("Invalid historical dossier")
-            if path not in current:
+            if k in current_grid and path not in current:
                 events.append(
                     dict(
                         id=k,

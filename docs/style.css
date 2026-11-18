@@ -944,6 +944,7 @@ footer .wrap {
     font-size: 9px;
   }
   .ranking .panel-title {
+    flex-wrap: wrap;
     align-items: flex-start;
   }
   .chart-key {
@@ -1191,14 +1192,6 @@ footer .wrap {
   }
 }
 @media (max-width: 730px) {
-  .mast nav {
-    overflow-x: auto;
-    justify-content: flex-start;
-    gap: 15px;
-  }
-  .mast nav a {
-    white-space: nowrap;
-  }
   .cal-toolbar {
     grid-template-columns: 1fr;
   }
@@ -1304,14 +1297,32 @@ footer .wrap {
   font: 500 0.83rem/1.6 var(--mono);
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .mast-inner {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: 0;
+    padding-block: 9px;
+  }
+  .mast-tools {
+    margin-left: auto;
+  }
   .mast nav {
-    gap: 12px;
-    overflow-x: auto;
-    min-width: 0;
+    order: 3;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 2px 16px;
+    margin-top: 7px;
+    padding-top: 5px;
+    border-top: 1px solid var(--line);
   }
   .mast nav a {
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
   }
 }
 @media (max-width: 560px) {

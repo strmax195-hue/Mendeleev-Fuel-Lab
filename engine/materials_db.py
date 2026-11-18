@@ -6,6 +6,7 @@ Grade, water, surface treatment and temperature matter. See STAGE2.md.
 
 DROP_IN = "100% Drop-In Stock Tank"
 SWAP = "Minor Seal Swap (EPDM/PTFE O-rings)"
+STAINLESS_SWAP = "Minor Seal Swap (EPDM/PTFE + Stainless)"
 INCOMPATIBLE = "Incompatible"
 # Material names and lower working temperatures of the assumed seal grades (°C).
 # Metal ductility and mechanical design are outside the chemical screen.
@@ -69,3 +70,25 @@ def retrofit(ratings, hardware="stock"):
     if any(ratings[k] == "suitable" for k in ("epdm", "ptfe")):
         return SWAP
     return INCOMPATIBLE
+
+
+def qualified_installation(chemical, temperatures):
+    """Choose one set of wetted parts that survives the entire temperature envelope."""
+    ratings = [at_temperature(chemical, t) for t in temperatures]
+    for name in ("stock", "stainless"):
+        _, metals, installed = HARDWARE[name]
+
+        def suitable(parts):
+            return all(row[k] == "suitable" for row in ratings for k in parts)
+
+        if not suitable(metals):
+            continue
+        for seals in (installed, ("epdm",), ("ptfe",)):
+            if suitable(seals):
+                verdict = (
+                    STAINLESS_SWAP
+                    if name == "stainless"
+                    else DROP_IN if seals == installed else SWAP
+                )
+                return {"assembly": name, "seals": list(seals), "verdict": verdict}
+    return {"assembly": None, "seals": [], "verdict": INCOMPATIBLE}

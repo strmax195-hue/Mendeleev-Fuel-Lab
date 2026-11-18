@@ -35,7 +35,8 @@ def issue_certificate(record, repo, dossier):
     return (
         "### Stage 2 survival certificate\n\n"
         f"**{gate['status'].upper()}** over −35 to +50 °C. Stock material verdict "
-        f"**{record['screen']['retrofit']['stock']}**. Wheel EROI is {road['eroi']:.3f} "
+        f"**{record['screen']['retrofit']['stock']}**. Full-envelope installation "
+        f"**{gate['installation']['verdict']}**. Wheel EROI is {road['eroi']:.3f} "
         f"and upstream primary energy is {road['investedMj100']:.2f} MJ/100 km at +15 °C.\n\n"
         + (", ".join(gate["failures"]) or "No modeled gates failed")
         + ".\n\n"

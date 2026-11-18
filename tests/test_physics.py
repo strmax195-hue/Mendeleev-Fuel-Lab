@@ -79,6 +79,42 @@ class Thermodynamics(unittest.TestCase):
                 self.assertEqual(cy["pv"][0][1], cy["pv"][-1][1])
                 self.assertAlmostEqual(cy["pv"][0][2], cy["pv"][-1][2], places=8)
 
+    def test_exhaust_blowdown_and_open_system_first_law(self):
+        for row in self.rows:
+            for cycle in row["cycles"].values():
+                e = cycle["exhaust"]
+                path = e["path"]
+                self.assertEqual([q[0] for q in path], list(range(180, 361)))
+                self.assertEqual(path[0][3], cycle["pv"][-2][3])
+                self.assertAlmostEqual(path[0][2], cycle["pv"][-2][2], places=10)
+                self.assertGreater(path[0][2], 2 * path[90][2])
+                self.assertTrue(path[0][3] > path[90][3] > path[-1][3] > e["wallK"])
+                self.assertGreater(e["wallJ"], 0)
+                for _, cc, bar, kelvin, mol in path:
+                    self.assertAlmostEqual(bar * 1e5 * cc * 1e-6, mol * R * kelvin, places=8)
+                self.assertAlmostEqual(
+                    path[0][4] - e["expelledMol"] + e["returnedMol"], path[-1][4]
+                )
+                n_total = sum(cycle["hot"].values())
+
+                def energy(q):
+                    return q[4] * (
+                        sum(n / n_total * properties(k, q[3])[1] for k, n in cycle["hot"].items())
+                        - R * q[3]
+                    )
+
+                self.assertAlmostEqual(
+                    energy(path[0]) - energy(path[-1]),
+                    e["workJ"] + e["wallJ"] + e["outflowEnthalpyJ"],
+                    delta=0.001,
+                )
+                self.assertLess(abs(e["energyResidualJ"]), 0.001)
+        plain, traced = simulate([self.rows[0]["parts"]])[0], self.rows[0]
+        for kind in ("Otto", "Diesel"):
+            self.assertEqual(plain["cycles"][kind]["workJ"], traced["cycles"][kind]["workJ"])
+            self.assertEqual(plain["cycles"][kind]["eta"], traced["cycles"][kind]["eta"])
+            self.assertNotIn("exhaust", plain["cycles"][kind])
+
     def test_independent_mass_action_quotients(self):
         for r in self.rows:
             for c in r["cycles"].values():

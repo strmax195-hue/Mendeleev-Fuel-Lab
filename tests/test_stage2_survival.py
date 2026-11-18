@@ -20,6 +20,8 @@ from engine.materials_db import (
     INCOMPATIBLE,
     MATERIALS,
     SWAP,
+    STAINLESS_SWAP,
+    qualified_installation,
     at_temperature,
     chemical_ratings,
     retrofit,
@@ -36,6 +38,8 @@ from engine.stage2_survival import (
     TEMPS,
     WEAR_LIMIT,
     activity,
+    dry_cold_bound,
+    dry_cold_index,
     flash_pressure,
     gate,
     inventory,
@@ -116,6 +120,57 @@ class SurvivalPhysics(unittest.TestCase):
                 for t in TEMPS:
                     verdict = [v for start, v in bands if start <= t][-1]
                     self.assertEqual(verdict, retrofit(at_temperature(s["chemical"], t), name))
+
+    def test_single_assembly_qualifies_over_the_entire_envelope(self):
+        for composition, expected, seal in [
+            ({"diesel": 1}, DROP_IN, "nbr"),
+            ({"ipa": 1}, SWAP, "epdm"),
+            ({"eth": 0.6, "ipa": 0.2, "dmc": 0.2}, STAINLESS_SWAP, "ptfe"),
+        ]:
+            installation = qualified_installation(chemical_ratings(composition), TEMPS)
+            self.assertEqual(installation["verdict"], expected)
+            self.assertEqual(installation["seals"], [seal])
+        chem = chemical_ratings({"dmc": 1})
+        chem["ss316"] = "review"
+        self.assertEqual(qualified_installation(chem, TEMPS)["verdict"], INCOMPATIBLE)
+
+    def test_stainless_admission_requires_all_independent_gates(self):
+        # Supply controlled measurements to isolate the material decision at a gate boundary.
+        s = screen({"eth": 34, "ipa": 44, "dmc": 22})
+        real = gate(s, {"eroi": 2, "investedMj100": 1}, 2)
+        self.assertEqual(real["installation"]["verdict"], STAINLESS_SWAP)
+        self.assertIn("Insufficient −35 °C cranking volatility", real["failures"])
+        self.assertEqual(real["status"], "rejected")
+        s.update(weather=[[0, 20, 1.1, 2] for _ in TEMPS], wearUm=500, supplyReview=False)
+        self.assertEqual(gate(s, {"eroi": 2, "investedMj100": 1}, 2)["status"], "passed")
+        s["chemical"]["ptfe"] = "avoid"
+        self.assertEqual(gate(s, {"eroi": 2, "investedMj100": 1}, 2)["status"], "rejected")
+
+    def test_dry_ternary_survey_and_binary_vle_evidence(self):
+        from engine.fuel_simulator import validate
+        from engine.stage2_inputs import PAIRS
+
+        dry = [p for p in catalogue().values() if p.keys() == {"eth", "ipa", "dmc"}]
+        self.assertEqual(len(dry), 160)
+        for x, t, y in [(0.1226, 358.28, 0.2611), (0.7507, 352.36, 0.7084)]:
+            log_alpha = 0.25274 + PAIRS["dmc", "ipa"] * 298.15 / t * (1 - 2 * x)
+            y_pred = x * math.exp(log_alpha) / (1 - x + x * math.exp(log_alpha))
+            self.assertAlmostEqual(y, y_pred, delta=0.018)
+        for excluded in ("dme", "dee"):
+            with self.assertRaises(ValueError):
+                validate({"eth": 89, "ipa": 10, excluded: 1})
+        bound = dry_cold_bound()
+        self.assertEqual(bound["gridPoints"], 4851)
+        self.assertAlmostEqual(
+            bound["upperIndex"], dry_cold_index(bound["parts"], check_phase=False), places=7
+        )
+        self.assertLess(bound["upperIndex"], 1)
+        with self.assertRaises(ValueError):
+            dry_cold_index({"eth": 60, "water": 40}, check_phase=True)
+        actual = screen({"eth": 34, "ipa": 44, "dmc": 22})
+        self.assertEqual(actual["weather"][0][0], 0)
+        self.assertAlmostEqual(actual["weather"][0][2], 0.04114, places=5)
+        self.assertGreater(actual["rvpKpa"], actual["weather"][0][1])
 
     def test_dose_is_minimum_and_stays_in_auxiliary_whitelist(self):
         s = screen({"eth": 64, "ipa": 36})

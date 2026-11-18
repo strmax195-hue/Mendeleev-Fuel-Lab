@@ -4,6 +4,7 @@ from fractions import Fraction
 from .elements_db import MODEL, STOCKS
 from .fuel_simulator import validate
 from .stage2_inputs import DOSES
+from .pathway_baselines import mixture_dt50
 
 
 def q(value):
@@ -64,6 +65,8 @@ def spill(kg, oxygen):
     half = list(AQUIFER_DT50_D["eth"]) if set(organic) == {"eth"} else None
     return {
         "aquiferOrganicDt50Days": half,
+        "baselineSoilDt50Days": mixture_dt50(kg, 0),
+        "baselineWaterDt50Days": mixture_dt50(kg, 1),
         "soilDt50Days": None,
         "surfaceWaterDt50Days": None,
         "aquiferOrganicKgPerKgAt28Days": [
