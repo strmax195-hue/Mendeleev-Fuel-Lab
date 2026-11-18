@@ -63,11 +63,13 @@ def model_hash():
         "engine/data/cea.json",
         "docs/thermo.js",
         "engine/stage2_publish.py",
-        "cli/local_worker.py",
     ):
         # Universal newlines also allow independent replay in Windows working trees.
         digest.update((ROOT / file).read_text(encoding="utf-8").encode())
-    return digest.hexdigest()
+    scientific_id = digest.hexdigest()
+    # Preserve the published scientific identity across the CLI-only migration.
+    aliases = json.loads((ROOT / "engine/data/stage2-identities.json").read_text(encoding="ascii"))
+    return aliases.get(scientific_id, scientific_id)
 
 
 def molecular_mass(key):

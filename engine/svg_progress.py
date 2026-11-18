@@ -59,10 +59,13 @@ def pareto_plot(state):
 def write_products(output, state):
     from .stage2_publish import publish
 
+    from .stage3_publish import publish as publish_calibration
+
     stage2 = publish(output, state)
+    stage3 = publish_calibration(output, state, stage2)
     assets = output / "assets"
     assets.mkdir(parents=True, exist_ok=True)
-    (assets / "mendeleev-fuel.svg").write_text(fuel_map(state, stage2), encoding="utf-8")
+    (assets / "mendeleev-fuel.svg").write_text(fuel_map(state, stage2, stage3), encoding="utf-8")
     (assets / "pareto.svg").write_text(pareto_plot(state), encoding="utf-8")
     badges = output / "badges"
     badges.mkdir(exist_ok=True)
@@ -72,6 +75,7 @@ def write_products(output, state):
             "Stage 2 model passes",
             f'{stage2["funnel"]["passed"]}/{len(stage2["nominated"])}',
         ),
+        ("calibration", "Stage 3 model champions", str(len(stage3["champions"]))),
         ("coverage", "survey", f'{100*state["tested"]/state["total"]:.1f}%'),
         ("generation", "generation", str(state["generation"])),
         ("frontier", "Pareto frontier", str(len(state["frontier"]))),

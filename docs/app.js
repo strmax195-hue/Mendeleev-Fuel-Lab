@@ -550,7 +550,18 @@
   const feedRoot =
     "https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/";
   const attachWeather = globalThis.FuelWeather({ $, make, set, fmt, lines, option, feedRoot });
+  const attachCalibration = globalThis.FuelCalibration({
+    $,
+    make,
+    set,
+    fmt,
+    lines,
+    option,
+    svg,
+    feedRoot,
+  });
   let weatherIndex = globalThis.FUEL_WEATHER.report;
+  let calibrationIndex = globalThis.FUEL_CALIBRATION.report;
   function render() {
     byId = new Map([...state.baselines, ...state.results].map((r) => [r.id, r]));
     const lead = [...state.results].sort((a, b) => b.index - a.index)[0];
@@ -568,6 +579,7 @@
     pumpOptions();
     race();
     attachWeather(state, weatherIndex);
+    attachCalibration(state, weatherIndex, calibrationIndex);
   }
   const media = matchMedia("(prefers-color-scheme: dark)");
   document.documentElement.dataset.theme = media.matches ? "dark" : "light";
@@ -607,13 +619,15 @@
       return r.json();
     }
     try {
-      const [incoming, index] = await Promise.all([
+      const [incoming, index, third] = await Promise.all([
         read("state.json"),
         read("stage2.json").catch(() => null),
+        read("stage3.json").catch(() => null),
       ]);
       if (!valid(incoming) || incoming.tested < state.tested)
         throw Error("Incompatible checkpoint");
       if (index || incoming.generation !== state.generation) weatherIndex = index;
+      if (third || incoming.generation !== state.generation) calibrationIndex = third;
       state = incoming;
       render();
       set(

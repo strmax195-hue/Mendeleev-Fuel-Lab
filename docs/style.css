@@ -1086,3 +1086,131 @@ footer .wrap {
   background: var(--paper);
   border: 1px solid currentColor;
 }
+
+.cal-toolbar {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 20px;
+}
+.cal-toolbar label,
+.cal-cursor {
+  font-size: 12px;
+  font-weight: 600;
+}
+.cal-toolbar select {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 14px;
+}
+.cal-card,
+.cal-outcome {
+  padding: 20px;
+  min-width: 0;
+}
+.cal-source {
+  margin: 10px 0 14px;
+}
+.cal-map {
+  table-layout: fixed;
+  margin: 14px 0 8px;
+}
+.cal-map td {
+  padding: 2px;
+  border: 0;
+}
+.cal-map th {
+  font: 11px var(--mono);
+  white-space: normal;
+  text-align: center;
+}
+.cal-cell {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  text-align: center;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--chart) var(--heat), var(--panel));
+  border-radius: 3px;
+  font: 12px var(--mono);
+  color: var(--ink);
+}
+.cal-cell[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.cal-map .cal-cell:hover {
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1px var(--orange);
+}
+.cal-point h4 {
+  margin: 16px 0 8px;
+}
+.cal-summary {
+  display: flex;
+  gap: 30px;
+  margin: 12px 0;
+}
+.cal-summary small {
+  color: var(--muted);
+}
+.cal-summary strong {
+  display: block;
+  font-size: 23px;
+}
+#cal-chart {
+  width: 100%;
+  height: auto;
+}
+#cal-chart text {
+  font: 11px var(--mono);
+  fill: var(--muted);
+}
+.cal-cursor {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+.cal-outcome {
+  margin-top: 14px;
+}
+.cal-outcome p {
+  margin: 6px 0 0;
+}
+#cal-downloads {
+  margin-top: 12px;
+}
+@media (max-width: 850px) {
+  .cal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 730px) {
+  .mast nav {
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 15px;
+  }
+  .mast nav a {
+    white-space: nowrap;
+  }
+  .cal-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .cal-card,
+  .cal-outcome {
+    padding: 14px;
+  }
+}
+
+#cal-chart .cal-speed-label {
+  fill: var(--chart);
+}
+#cal-chart .cal-cat-label {
+  fill: var(--orange);
+}

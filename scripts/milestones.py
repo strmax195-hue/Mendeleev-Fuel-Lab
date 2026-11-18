@@ -108,6 +108,38 @@ def reconcile(state, repo, certificates=None):
         )
 
 
+def reconcile_calibrations(events, repo):
+    if not events:
+        return
+    seen = {
+        i["body"].splitlines()[0]
+        for i in all_items(f"repos/{repo}/issues?state=all")
+        if i.get("body") and "pull_request" not in i
+    }
+    for event in events:
+        key, model = event["id"], event["model"]
+        marker = f"<!-- fuel-lab-stage3 {model} {key} -->"
+        if marker in seen:
+            continue
+        path = f"https://github.com/{repo}/blob/lab-data/{event['path']}"
+        body = (
+            f"{marker}\n**Computational qualification** for {key}, generation {event['generation']}. "
+            f"The Stage 2 survivor cleared the modeled calibration and WLTC gates on "
+            f"{', '.join(event['architectures'])}. Regulatory approval, vehicle ECU release and "
+            f"the oil service interval require independent testing.\n\n"
+            f"[University dyno bench protocol]({path}/protocol.md) · "
+            f"[Calibration maps, phase balances and thermal traces]({path}/results.json) · "
+            f"[Protocol JSON]({path}/protocol.json)"
+        )
+        gh(
+            f"repos/{repo}/issues",
+            "--input",
+            "-",
+            data={"title": f"[STAGE-3 CERTIFIED] {key} · model qualification", "body": body},
+        )
+        seen.add(marker)
+
+
 if __name__ == "__main__":
     checkpoint = Path(sys.argv[1])
     state = json.loads(checkpoint.read_text())
@@ -115,4 +147,8 @@ if __name__ == "__main__":
         e["id"]: json.loads((checkpoint.parent / "weather" / (e["id"] + ".json")).read_text())
         for e in state["records"]
     }
-    reconcile(state, os.environ["GITHUB_REPOSITORY"], certificates)
+    repo = os.environ["GITHUB_REPOSITORY"]
+    reconcile(state, repo, certificates)
+    ledger = checkpoint.parent / "stage3-events.json"
+    if ledger.exists():
+        reconcile_calibrations(json.loads(ledger.read_bytes()), repo)

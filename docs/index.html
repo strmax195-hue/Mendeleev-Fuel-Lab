@@ -21,6 +21,8 @@
     <script defer src="thermo.js"></script>
     <script defer src="weather-seed.js"></script>
     <script defer src="weather.js"></script>
+    <script defer src="calibration-seed.js"></script>
+    <script defer src="calibration.js"></script>
     <script defer src="app.js"></script>
   </head>
   <body>
@@ -35,7 +37,7 @@
         <nav aria-label="Main navigation">
           <a href="#elements">Periodic map</a><a href="#explorer">Frontier</a
           ><a href="#bench">Blend lab</a><a href="#race">Tank race</a
-          ><a href="#weather">Weather tester</a>
+          ><a href="#weather">Weather tester</a><a href="#calibration">ECU maps</a>
         </nav>
         <div class="mast-tools">
           <button
@@ -247,6 +249,99 @@
             laboratory tests.
             <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE2.md"
               >Screening methods</a
+            >
+          </p>
+        </section>
+        <section id="calibration" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Stage 3 · engine calibration</div>
+              <h2>ECU &amp; drive-cycle inspector</h2>
+            </div>
+            <span class="subtle" id="cal-funnel"></span>
+          </div>
+          <div class="panel cal-toolbar">
+            <label
+              >Engine architecture<select id="cal-engine">
+                <option value="mpi">MPI · 10.5:1</option>
+                <option value="gdi">GDI turbo · 1.8 bar boost</option>
+                <option value="diesel">Common-rail diesel · 16.5:1</option>
+              </select></label
+            >
+            <label>Fuel<select id="cal-fuel"></select></label>
+            <label>Heatmap quantity<select id="cal-metric"></select></label>
+          </div>
+          <p class="cal-source note" id="cal-source" role="status"></p>
+          <p id="cal-message" role="status"></p>
+          <div id="cal-output" hidden>
+            <div class="cal-grid">
+              <article class="panel cal-card">
+                <div class="panel-title">
+                  <h3>Calibration heatmap</h3>
+                  <span class="subtle">RPM × load</span>
+                </div>
+                <div class="table-scroll">
+                  <table class="cal-map" id="cal-table" aria-label="Select an RPM and load"></table>
+                </div>
+                <p class="note" id="cal-map-note"></p>
+                <div class="cal-point">
+                  <h4 id="cal-point"></h4>
+                  <dl class="mini-dl" id="cal-point-values"></dl>
+                </div>
+              </article>
+              <article class="panel cal-card">
+                <div class="panel-title">
+                  <h3>WLTC Class 3b</h3>
+                  <span class="subtle">23 °C cold soak</span>
+                </div>
+                <div class="cal-summary" id="cal-totals"></div>
+                <svg
+                  id="cal-chart"
+                  viewBox="0 0 560 204"
+                  role="img"
+                  aria-label="Official vehicle speed and modeled catalyst temperature versus time"
+                ></svg>
+                <label class="cal-cursor" for="cal-time"
+                  >Cycle time <output id="cal-time-label" for="cal-time"></output
+                ></label>
+                <input
+                  id="cal-time"
+                  type="range"
+                  step="1"
+                  min="0"
+                  value="0"
+                  aria-label="Inspect cycle time"
+                />
+                <p id="cal-sample" class="note"></p>
+                <div class="table-scroll">
+                  <table aria-label="Phase fuel consumption">
+                    <thead>
+                      <tr>
+                        <th>Phase</th>
+                        <th>Distance, km</th>
+                        <th>L/100 km</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cal-phases"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+            <div class="panel cal-outcome">
+              <h3>Cold start &amp; oil life</h3>
+              <p id="cal-durability"></p>
+              <p id="cal-limits" class="note"></p>
+            </div>
+          </div>
+          <div id="cal-downloads" hidden>
+            <button class="button outline" id="cal-md">Download bench protocol · Markdown</button>
+            <button class="button outline" id="cal-json">Download bench protocol · JSON</button>
+          </div>
+          <p class="note">
+            Calibration offsets and service ceilings are model predictions. Vehicle ECU release, oil
+            service and WLTP type approval require independent measurements.
+            <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE3.md"
+              >Stage 3 methods</a
             >
           </p>
         </section>

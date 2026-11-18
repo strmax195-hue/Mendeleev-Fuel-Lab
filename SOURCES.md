@@ -67,6 +67,10 @@ The index is an expressed research preference. The weights are 35% production co
 
 Stage 2 adds the independently versioned winter phase, volatility, pump wear, wetted-material and well-to-wheel screens. Numerical inputs, uncertainty, material test practices and sources are documented with their equations. [Stage 2 methods and sources](STAGE2.md)
 
+## Dynamic engine and WLTC validation
+
+The Stage 3 calibration methods, original kinetic correlations, official EU driving trace, injector assumptions and durability evidence are documented together. [Stage 3 methods and source register](STAGE3.md)
+
 ## Reproducibility and rights
 
 The survey includes all admitted pure inputs and binary grid points, the published microemulsion point, and an evenly spread integer-index selection of hydrous ternary interiors. There are five neat fuels, 238 binaries and 757 ternaries. The grid is ordered by composition, with a coprime traversal stride and a bounded one-point mutation step. Changing the model or catalogue changes its fingerprint. Existing checkpoints reject mismatched results. The orphan branch history and the source commit in each run manifest identify the experiment.

@@ -26,7 +26,7 @@ def frame(title, desc, body, w, h):
     )
 
 
-def fuel_map(state, stage2=None):
+def fuel_map(state, stage2=None, stage3=None):
     pct = 100 * state["tested"] / state["total"]
     b = [
         txt(26, 33, "MENDELEEV  /  FUEL LAB", 16, "mono bold"),
@@ -99,10 +99,28 @@ def fuel_map(state, stage2=None):
                 ),
             ]
         )
+    if stage3 is not None:
+        n = len(stage3["eligible"])
+        gold = len(stage3["champions"])
+        b.extend(
+            [
+                txt(26, 603, "Stage 3 · Knock, ECU and WLTC Class 3b", 17, "bold"),
+                txt(764, 603, f"{gold} golden candidates", 14, "mono", 'text-anchor="end"'),
+                rect(26, 616, 738, 7, "soft", 3),
+                rect(26, 616, 738 * gold / max(1, n), 7, "accent", 3),
+                txt(
+                    26,
+                    649,
+                    f"{n} Stage 2 survivors  ·  3 architectures  ·  Computational qualification",
+                    13,
+                    "mono",
+                ),
+            ]
+        )
     return frame(
         "Periodic Table Fuel Map",
         "Thermodynamic catalogue coverage and shortlisted engineering survival screens.",
         b,
         790,
-        582 if stage2 is not None else 442,
+        669 if stage3 is not None else 582 if stage2 is not None else 442,
     )

@@ -1,4 +1,4 @@
-"""Compute or independently replay a portable Stage 2 sector with Python 3.10+."""
+"""Compute or independently replay a portable Stage 2 / Stage 3 sector with Python 3.10+."""
 
 import argparse
 import hashlib
@@ -70,17 +70,45 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--start", type=int, help="Zero-based index in sorted catalogue order")
+    mode.add_argument("--candidate", help="Stage 3 catalogue ID or ai95100 / diesel100 control")
     mode.add_argument("--verify", type=Path, metavar="BUNDLE")
-    parser.add_argument("--count", type=int, default=10)
+    parser.add_argument("--stage", type=int, choices=(2, 3), default=None)
+    parser.add_argument("--count", type=int)
     parser.add_argument("--output", type=Path, help="Default: sector-START-COUNT.json")
     args = parser.parse_args()
     try:
         if args.verify:
-            verify(read_bundle(args.verify))
+            value = read_bundle(args.verify)
+            stage = (
+                3
+                if isinstance(value, dict)
+                and isinstance(value.get("payload"), dict)
+                and value["payload"].get("schema") == 3
+                else 2
+            )
+            if args.stage is not None and args.stage != stage:
+                raise ValueError("Requested stage disagrees with the bundle")
+            if stage == 3:
+                from cli.calibration_worker import verify as verify_stage3
+
+                verify_stage3(value)
+            else:
+                verify(value)
             print("SHA-256 and independent numerical replay verified.")
             return
-        bundle = compute(args.start, args.count)
-        output = args.output or Path(f"sector-{args.start:04d}-{args.count:02d}.json")
+        if args.stage == 3:
+            from cli.calibration_worker import compute as compute_stage3
+
+            count = 1 if args.count is None else args.count
+            bundle = compute_stage3(args.start, count, args.candidate)
+            label = args.candidate or f"{args.start:04d}-{count:02d}"
+            output = args.output or Path(f"calibration-{label}.json")
+        else:
+            if args.candidate:
+                raise ValueError("--candidate requires --stage 3")
+            count = 10 if args.count is None else args.count
+            bundle = compute(args.start, count)
+            output = args.output or Path(f"sector-{args.start:04d}-{count:02d}.json")
         output.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             dir=output.parent, delete=False, mode="w", encoding="ascii", newline="\n"

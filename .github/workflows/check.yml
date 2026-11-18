@@ -15,5 +15,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Replay portable Python weather calculations
-        run: python -m unittest discover -s tests -p test_stage2_survival.py -v
+      - name: Replay portable Python weather and calibration calculations
+        run: |
+          python -m unittest discover -s tests -p test_stage2_survival.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s tests -p test_stage3_calibration.py -v
