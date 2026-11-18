@@ -51,15 +51,16 @@ Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material 
 | Ambient dynamic viscosity at +20 °C | 2.244 mPa·s |
 | Estimated wear before / after | 670 / 670 µm |
 | Added bio-ester | 0.0% of final liquid volume |
-| Wheel energy / invested primary energy | 50.17 / 113.99 MJ per 100 km |
-| Wheel EROI / delivered fuel cost | 0.440 / $4.00 per 100 km |
-| Synthesis electricity (included in fuel cost) | 5.09 kWh, $0.61 per 100 km |
+| Wheel energy / invested primary energy at +15 °C | 50.17 / 113.99 MJ per 100 km |
+| Wheel EROI / delivered fuel cost at +15 °C | 0.440 / $4.00 per 100 km |
+| Delivered cost at −35 / +50 °C, engine running | $4.56 / $3.70 per 100 km |
+| Synthesis electricity at +15 °C (included in fuel cost) | 5.09 kWh, $0.61 per 100 km |
 
 **Failed gates** · Insufficient −35 °C cranking volatility, Wear proxy exceeds pump screen, Wheel EROI below 1, Delivered cost exceeds AI-95.
 
 **Further evidence** · Pathway / ester supply needs capacity evidence.
 
-Stage 1 `7550aae150609a34` · Stage 2 SHA-256 `9e9f06ab4bcbfeed9671bccc0e09ac08426ea1a9e10cb94996f74c4b728d0cc0`.
+Stage 1 `7550aae150609a34` · Stage 2 SHA-256 `1b255ec6773aabf7fe440e8c9271f9f88d52751eff11c270691e0ab5429427a1`.
 
 Reproduce the physical sector with `python cli/local_worker.py --start 527 --count 1`. [Read all 86 temperatures](../data/weather/eth5-ipa90-water5.json) · [Find the source revision](../data/stage2-manifest.json).
 <!-- fuel-lab stage2 end -->
