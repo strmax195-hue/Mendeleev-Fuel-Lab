@@ -547,6 +547,10 @@
       }),
     );
   }
+  const feedRoot =
+    "https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/";
+  const attachWeather = globalThis.FuelWeather({ $, make, set, fmt, lines, option, feedRoot });
+  let weatherIndex = globalThis.FUEL_WEATHER.report;
   function render() {
     byId = new Map([...state.baselines, ...state.results].map((r) => [r.id, r]));
     const lead = [...state.results].sort((a, b) => b.index - a.index)[0];
@@ -563,6 +567,7 @@
     leaderboard();
     pumpOptions();
     race();
+    attachWeather(state, weatherIndex);
   }
   const media = matchMedia("(prefers-color-scheme: dark)");
   document.documentElement.dataset.theme = media.matches ? "dark" : "light";
@@ -590,19 +595,25 @@
   set("feed", "Calculated seed · generation " + state.generation);
   async function refresh() {
     if (location.protocol === "file:") return;
-    const url =
-      "https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/state.json";
-    try {
-      const r = await fetch(url + "?window=" + Math.floor(Date.now() / 1200000), {
+    const query = "?window=" + Math.floor(Date.now() / 1200000);
+    async function read(name) {
+      const r = await fetch(feedRoot + name + query, {
         cache: "no-cache",
         credentials: "omit",
         referrerPolicy: "no-referrer",
         signal: AbortSignal.timeout(12000),
       });
       if (!r.ok) throw Error("Feed unavailable");
-      const incoming = await r.json();
+      return r.json();
+    }
+    try {
+      const [incoming, index] = await Promise.all([
+        read("state.json"),
+        read("stage2.json").catch(() => null),
+      ]);
       if (!valid(incoming) || incoming.tested < state.tested)
         throw Error("Incompatible checkpoint");
+      if (index || incoming.generation !== state.generation) weatherIndex = index;
       state = incoming;
       render();
       set(

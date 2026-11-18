@@ -5,6 +5,8 @@ from engine.discovery_solver import advance, new_state
 from engine.fuel_simulator import ROOT, model_script
 from engine.svg_progress import pareto_plot
 from engine.svg_dashboard import fuel_map
+from engine.stage2_publish import build
+from engine.stage2_survival import canonical
 
 
 def main():
@@ -14,7 +16,12 @@ def main():
     (ROOT / "docs/seed.js").write_text(
         "globalThis.FUEL_SEED=" + json.dumps(state, separators=(",", ":"), allow_nan=False) + ";\n"
     )
-    (ROOT / "assets/mendeleev-fuel.svg").write_text(fuel_map(state))
+    report, rows = build(state)
+    (ROOT / "docs/weather-seed.js").write_text(
+        "globalThis.FUEL_WEATHER=" + canonical({"report": report, "rows": rows}) + ";\n",
+        encoding="ascii",
+    )
+    (ROOT / "assets/mendeleev-fuel.svg").write_text(fuel_map(state, report))
     (ROOT / "assets/pareto.svg").write_text(pareto_plot(state))
 
 

@@ -10,7 +10,7 @@ if [[ -n "$ref" ]]; then
 else
   git worktree add --quiet --orphan -b "lab-bootstrap-${GITHUB_RUN_ID:-local}" "$output"
 fi
-python3 -m engine.discovery_solver --output "$output" --batch "${LAB_BATCH:-24}"
+python3 -m engine.stage2_publish --output "$output" --batch "${LAB_BATCH:-24}"
 git -C "$output" add -- data assets badges
 if [[ -d "$output/dossiers" ]]; then git -C "$output" add -- dossiers; fi
 if ! git -C "$output" diff --cached --quiet; then

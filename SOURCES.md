@@ -63,6 +63,10 @@ For gate-only fuel pathways, a declared transport allowance of 0.03 kg CO₂e/kg
 
 The index is an expressed research preference. The weights are 35% production cost, 10% crustal abundance, 30% lifecycle CO₂e/km, 8% hot NO, 2% recoverable exhaust and 15% infrastructure. Cost, lifecycle and NO use `1 / (1 + value / AI95_value)`. The abundance term mass-weights `log10(1 + crustal ppm)/6`. Crustal occurrence is an accessibility proxy. Fuel production economics are supplied independently. Infrastructure gives 40% credit for an ambient liquid tank, then 60% for a mole-weighted engine-adaptability rubric. Reference road fuels score 1.00 on that rubric, B100 0.75, ethanol 0.65, IPA 0.45, DMC/octanol 0.40 and water 0.30. Blend approvals vary by market and manufacturer. [USGS crustal abundance, table 20](https://pubs.usgs.gov/pp/0440d/report.pdf) · [PubChem element identifiers](https://pubchem.ncbi.nlm.nih.gov/periodic-table/)
 
+## Engineering survival validation
+
+Stage 2 adds the independently versioned winter phase, volatility, pump wear, wetted-material and well-to-wheel screens. Numerical inputs, uncertainty, material test practices and sources are documented with their equations. [Stage 2 methods and sources](STAGE2.md)
+
 ## Reproducibility and rights
 
 The survey includes all admitted pure inputs and binary grid points, the published microemulsion point, and an evenly spread integer-index selection of hydrous ternary interiors. There are five neat fuels, 238 binaries and 757 ternaries. The grid is ordered by composition, with a coprime traversal stride and a bounded one-point mutation step. Changing the model or catalogue changes its fingerprint. Existing checkpoints reject mismatched results. The orphan branch history and the source commit in each run manifest identify the experiment.

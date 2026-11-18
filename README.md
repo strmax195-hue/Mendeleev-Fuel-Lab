@@ -1,6 +1,6 @@
 # Auto-Element Fuel Lab
 
-An autonomous, static observatory for **affordable, lower-carbon automotive liquids**. It screens a finite catalogue of 1,000 pure liquids and blends at 1 mol% resolution. Each result has an atom balance, an energy balance, two pressure–volume cycles and a highway road-load calculation. The ranking gives production cost and lifecycle emissions the largest weights.
+An autonomous, static observatory for **affordable, lower-carbon automotive liquids**. It screens a finite catalogue of 1,000 pure liquids and blends at 1 mol% resolution. Each result has an atom balance, an energy balance, two pressure–volume cycles and a highway road-load calculation. A second stage subjects the thermodynamic frontier to winter starting, summer vapour lock, pump wear, material and delivered-cost screens.
 
 **[Open the interactive observatory](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/)** · [Live results](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/state.json) · [Discovery dossiers](https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/tree/lab-data/dossiers) · [Methods and sources](SOURCES.md)
 
@@ -8,9 +8,17 @@ An autonomous, static observatory for **affordable, lower-carbon automotive liqu
 ![Discovery generation](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fstrmax195-hue%2FMendeleev-Fuel-Lab%2Flab-data%2Fbadges%2Fgeneration.json&cacheSeconds=300)
 ![Three-objective frontier](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fstrmax195-hue%2FMendeleev-Fuel-Lab%2Flab-data%2Fbadges%2Ffrontier.json&cacheSeconds=300)
 
-![Live periodic fuel map and master survey progress](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/assets/mendeleev-fuel.svg)
+![Stage 2 survival](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fstrmax195-hue%2FMendeleev-Fuel-Lab%2Flab-data%2Fbadges%2Fsurvival.json&cacheSeconds=300)
+
+![Live two-stage fuel map and master survey progress](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/assets/mendeleev-fuel.svg)
 
 **Periodic Space Explored** counts distinct members of the declared liquid catalogue that passed both conservation checks. The full periodic table supplies context. Green cells occur in tested fuel inventories. The progress denominator is 1,000 compositions.
+
+## Two-stage discovery funnel
+
+Stage 1 ranks the 1,000-liquid catalogue by range, production cost and lifecycle emissions. Every tested formula gets a Stage 2 weather profile. The Pareto frontier and recorded discoveries enter the engineering shortlist automatically. Its second progress bar counts **full-envelope model passes / shortlisted candidates**. A candidate can lead on range and still fail at −35 °C. Both failed gates and unresolved evidence appear in its dossier. [Live Stage 2 index](https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/lab-data/data/stage2.json)
+
+The **car weather tester** reads 86 temperature points per fuel, reports liquid separation and freezing independently, and compares three fuel-system assemblies. Select a formula to inspect seal ratings, the four-volume RVP estimate, cranking volatility, hot-rail and inlet margins, bio-ester dose, wheel EROI and delivered cost. “Drop-In” is a material-screen verdict for the selected assembly. Chemical and vehicle qualification require physical tests. [Open the weather tester](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#weather) · [Engineering assumptions and validation methods](STAGE2.md)
 
 ## What a 50-litre tank buys
 
@@ -38,7 +46,7 @@ Waste-oil biodiesel has the lowest lifecycle estimate in this comparison. Its pr
 
 ## Scientific scope
 
-The registry admits bioethanol, isopropanol, dimethyl carbonate, waste-oil biodiesel, 1-octanol and water within specific phase families. The alcohol–water grid has a 20 mol% water ceiling. A separate, experimentally characterised octanol–ethanol–water point represents a reverse microemulsion. Its precise composition has a dedicated admission rule. The engine gives a phase status only within its declared 298.15 K screening envelope. [Phase evidence](https://doi.org/10.1021/acscentsci.6b00116)
+The registry admits bioethanol, isopropanol, dimethyl carbonate, waste-oil biodiesel, 1-octanol and water within specific phase families. The alcohol–water grid has a 20 mol% water ceiling. A separate, experimentally characterised octanol–ethanol–water point represents a reverse microemulsion. Its precise composition has a dedicated admission rule. The primary engine classifies admission at 298.15 K. Stage 2 separately screens phase stability across the weather envelope. [Phase evidence](https://doi.org/10.1021/acscentsci.6b00116)
 
 Fuel admission uses a **positive whitelist** of identified substances and compatible families. Cryogenic and pressurised fuels, metallic slurries, reactive metal carriers, ammonia, peroxide-forming ethers, explosives, acute toxins and radioactive feedstocks have no fuel entry. Road gasoline and diesel are fixed surrogate controls. Ordinary automotive liquids are flammable. Results are for numerical research. Vehicle compatibility, measured octane, cold-start behaviour and regulated emissions require independent tests.
 
@@ -65,11 +73,18 @@ Python 3.10+ and Node.js 18+ run the numerical lab using standard libraries. The
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 -m engine.discovery_solver --output .lab --batch 24
+python3 -m engine.stage2_publish --output .lab --batch 24
 python3 -m engine.discovery_solver --verify eth80-ipa20
 python3 -m scripts.build_assets
 ```
 
-The verification command emits both crank-angle traces. Volume is in cm³, pressure in absolute bar and temperature in kelvin. To render the 1280 × 640 social card, run `python3 scripts/generate_social_preview.py` in an environment with Pillow. Molecular data and all thermodynamic calculations work offline. [Input verification and reproducibility](SOURCES.md)
+The Python-only citizen worker computes new Stage 2 sectors offline on Windows and Linux. It needs no Node.js, package install or account. An independently replayable JSON bundle can be submitted under `contributions/` in a PR.
+
+```sh
+python cli/local_worker.py --start 100 --count 10 --output contributions/sector-0100-10.json
+python cli/local_worker.py --verify contributions/sector-0100-10.json
+```
+
+The Stage 1 verification command emits both crank-angle traces. Volume is in cm³, pressure in absolute bar and temperature in kelvin. To render the 1280 × 640 social card, run `python3 scripts/generate_social_preview.py` in an environment with Pillow. Molecular data and all thermodynamic calculations work offline. [Input verification and reproducibility](SOURCES.md)
 
 The original software, artwork and documentation use the repository's MIT licence. The application has no accounts, analytics, cookies, free-text inputs or personal-data store. Live mode requests public GitHub data. GitHub Pages, GitHub Actions and Shields handle their own infrastructure traffic. [MIT licence](LICENSE)

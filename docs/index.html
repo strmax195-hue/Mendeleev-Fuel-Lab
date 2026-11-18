@@ -19,6 +19,8 @@
     <script defer src="model.js"></script>
     <script defer src="seed.js"></script>
     <script defer src="thermo.js"></script>
+    <script defer src="weather-seed.js"></script>
+    <script defer src="weather.js"></script>
     <script defer src="app.js"></script>
   </head>
   <body>
@@ -32,7 +34,8 @@
         >
         <nav aria-label="Main navigation">
           <a href="#elements">Periodic map</a><a href="#explorer">Frontier</a
-          ><a href="#bench">Blend lab</a><a href="#race">Tank race</a>
+          ><a href="#bench">Blend lab</a><a href="#race">Tank race</a
+          ><a href="#weather">Weather tester</a>
         </nav>
         <div class="mast-tools">
           <button
@@ -191,6 +194,60 @@
             </div>
             <p class="note" id="anomalies"></p>
           </div>
+        </section>
+        <section id="weather" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Stage 2 · engineering screen</div>
+              <h2>Car weather tester</h2>
+            </div>
+            <span class="subtle" id="weather-funnel"></span>
+          </div>
+          <div class="weather-layout">
+            <div class="panel controls weather-controls">
+              <label for="weather-fuel">Discovered formula or reference</label
+              ><select id="weather-fuel"></select>
+              <label for="weather-car">Wetted fuel system</label
+              ><select id="weather-car"></select>
+              <div class="slider-row weather-thermostat">
+                <label for="weather-temp"
+                  >Ambient temperature
+                  <output for="weather-temp" id="weather-degrees">−35 °C</output></label
+                >
+                <input type="range" min="-35" max="50" step="1" value="-35" id="weather-temp" />
+                <div class="weather-strip" id="weather-strip" aria-hidden="true"></div>
+                <div class="weather-ticks">
+                  <span>−35 °C</span><span>0</span><span>+50 °C</span>
+                </div>
+              </div>
+              <p class="note">
+                The strip shows the liquid-phase screen at each degree. Green is single liquid,
+                amber needs data, and hatched regions indicate a split or solid risk.
+              </p>
+              <p id="weather-source" class="note" role="status"></p>
+            </div>
+            <div class="panel weather-results">
+              <div id="weather-message" role="status"></div>
+              <div id="weather-body" hidden>
+                <div class="panel-title">
+                  <h3 id="weather-phase"></h3>
+                  <span id="weather-status" class="pill"></span>
+                </div>
+                <p id="weather-verdict"></p>
+                <dl class="weather-readings mini-dl" id="weather-readings"></dl>
+                <h4>Wetted materials at this temperature</h4>
+                <div class="material-badges" id="weather-materials"></div>
+                <p class="note" id="weather-gates"></p>
+              </div>
+            </div>
+          </div>
+          <p class="note">
+            Warmed sedan at 110 km/h. Cost is for delivered fuel consumed over 100 km. Cold-soak
+            starting, seal fits, RVP and pump wear require vehicle or laboratory tests.
+            <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE2.md"
+              >Screening methods</a
+            >
+          </p>
         </section>
         <section id="bench" class="section">
           <div class="section-head">

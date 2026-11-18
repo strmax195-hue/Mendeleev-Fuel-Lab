@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from engine.stage2_publish import block
+
 
 def gh(*args, data=None):
     p = subprocess.run(
@@ -28,12 +30,27 @@ def all_items(endpoint):
         page += 1
 
 
-def reconcile(state, repo):
+def issue_certificate(record, repo, dossier):
+    gate, road = record["gate"], record["road"]
+    return (
+        "### Stage 2 survival certificate\n\n"
+        f"**{gate['status'].upper()}** over −35 to +50 °C. Stock material verdict "
+        f"**{record['screen']['retrofit']['stock']}**. Wheel EROI is {road['eroi']:.3f} "
+        f"and delivered fuel costs ${road['wtwUsd100']:.2f}/100 km.\n\n"
+        + (", ".join(gate["failures"]) or "No modeled gates failed")
+        + ".\n\n"
+        f"Stage 2 model `{record['model'][:16]}`. "
+        f"[Review the computational certificate, assumptions and reproduction command]"
+        f"(https://github.com/{repo}/blob/lab-data/{dossier}#stage-2-survival-certificate)."
+    )
+
+
+def reconcile(state, repo, certificates=None):
     if not state["records"]:
         return
     issues = all_items(f"repos/{repo}/issues?state=all")
     created = {
-        issue["body"].splitlines()[0]
+        issue["body"].splitlines()[0]: issue
         for issue in issues
         if issue.get("body") and "pull_request" not in issue
     }
@@ -41,7 +58,24 @@ def reconcile(state, repo):
     milestone = None
     for e in state["records"]:
         marker = f'<!-- fuel-lab {state["model"]} {e["kind"]} {e["id"]} -->'
+        cert = (
+            issue_certificate(certificates[e["id"]], repo, e["dossier"])
+            if certificates is not None
+            else None
+        )
         if marker in created:
+            existing = created[marker]
+            if cert:
+                updated = block(existing["body"], cert)
+                if updated.rstrip() != existing["body"].rstrip():
+                    gh(
+                        f"repos/{repo}/issues/{existing['number']}",
+                        "--method",
+                        "PATCH",
+                        "--input",
+                        "-",
+                        data={"body": updated},
+                    )
             continue
         if milestone is None:
             title = f'Liquid survey · {state["model"]}'
@@ -64,14 +98,21 @@ def reconcile(state, repo):
             f'The Eco-Affordability Index is **{r["index"]:.1f}/100**.\n\n'
             f'[Review the balance, P–V data and reproduction command](https://github.com/{repo}/blob/lab-data/{e["dossier"]}).'
         )
-        gh(
+        if cert:
+            body = block(body, cert)
+        created[marker] = gh(
             f"repos/{repo}/issues",
             "--input",
             "-",
             data={"title": f"{title} · {r['name']}", "body": body, "milestone": milestone},
         )
-        created.add(marker)
 
 
 if __name__ == "__main__":
-    reconcile(json.loads(Path(sys.argv[1]).read_text()), os.environ["GITHUB_REPOSITORY"])
+    checkpoint = Path(sys.argv[1])
+    state = json.loads(checkpoint.read_text())
+    certificates = {
+        e["id"]: json.loads((checkpoint.parent / "weather" / (e["id"] + ".json")).read_text())
+        for e in state["records"]
+    }
+    reconcile(state, os.environ["GITHUB_REPOSITORY"], certificates)

@@ -21,7 +21,9 @@ jobs:
         with:
           ref: main
       - name: Verify scientific invariants
-        run: python3 -m unittest discover -s tests -p 'test_physics.py' -v
+        run: |
+          python3 -m unittest discover -s tests -p 'test_physics.py' -v
+          python3 -m unittest discover -s tests -p 'test_stage2_survival.py' -v
       - name: Evaluate and publish the next generation
         env:
           GH_TOKEN: ${{ github.token }}

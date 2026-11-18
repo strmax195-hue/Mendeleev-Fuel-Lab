@@ -26,7 +26,7 @@ def frame(title, desc, body, w, h):
     )
 
 
-def fuel_map(state):
+def fuel_map(state, stage2=None):
     pct = 100 * state["tested"] / state["total"]
     b = [
         txt(26, 33, "MENDELEEV  /  FUEL LAB", 16, "mono bold"),
@@ -70,10 +70,39 @@ def fuel_map(state):
                 14,
             )
         )
+    if stage2 is not None:
+        count = len(stage2["nominated"])
+        passed = stage2["funnel"]["passed"]
+        b.extend(
+            [
+                txt(26, 465, "Stage 1 · Thermodynamic Pareto discovery", 17, "bold"),
+                txt(
+                    764,
+                    465,
+                    f'{state["tested"]:,} / {state["total"]:,} tested',
+                    14,
+                    "mono",
+                    'text-anchor="end"',
+                ),
+                rect(26, 478, 738, 7, "soft", 3),
+                rect(26, 478, 738 * pct / 100, 7, "accent", 3),
+                txt(26, 518, "Stage 2 · Weather and material survival", 17, "bold"),
+                txt(764, 518, f"{passed} / {count} model passes", 14, "mono", 'text-anchor="end"'),
+                rect(26, 531, 738, 7, "soft", 3),
+                rect(26, 531, 738 * passed / max(1, count), 7, "accent", 3),
+                txt(
+                    26,
+                    562,
+                    f'−35 to +50 °C  ·  {count} shortlisted and screened  ·  {stage2["funnel"]["rejected"]} rejected  ·  {stage2["funnel"]["review"]} in review',
+                    13,
+                    "mono",
+                ),
+            ]
+        )
     return frame(
         "Periodic Table Fuel Map",
-        "Progress through the curated 1,000-composition survey at 25 °C.",
+        "Thermodynamic catalogue coverage and shortlisted engineering survival screens.",
         b,
         790,
-        442,
+        582 if stage2 is not None else 442,
     )
