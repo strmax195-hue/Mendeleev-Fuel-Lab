@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -20,9 +21,27 @@ class Publication(unittest.TestCase):
             def git(*args, cwd=work):
                 return subprocess.check_output(["git", *map(str, args)], cwd=cwd, text=True).strip()
 
-            git("clone", "--quiet", "--no-local", ROOT, checkout)
+            # Create a standalone fixture even when Actions supplies a depth-one checkout.
+            git("init", "--quiet", "--initial-branch=main", checkout)
+            for name in git("ls-files", "-z", cwd=ROOT).split("\0"):
+                if name:
+                    target = checkout / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(ROOT / name, target)
+            git("add", ".", cwd=checkout)
+            git(
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "commit",
+                "--quiet",
+                "-m",
+                "Fixture root",
+                cwd=checkout,
+            )
             git("init", "--quiet", "--bare", origin)
-            git("remote", "set-url", "origin", origin, cwd=checkout)
+            git("remote", "add", "origin", origin, cwd=checkout)
             git("push", "--quiet", "origin", "HEAD:main", cwd=checkout)
             # Isolate the issue API. This test exercises the actual Git state transitions.
             gh = work / "gh"
