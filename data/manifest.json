@@ -1,0 +1,6 @@
+{
+  "model": "7550aae150609a34",
+  "source_commit": "f6818c391ed0ce7790bee44924658dfa5490ee2c",
+  "sources": "https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/f6818c391ed0ce7790bee44924658dfa5490ee2c/SOURCES.md",
+  "verification": "git checkout f6818c391ed0ce7790bee44924658dfa5490ee2c"
+}
