@@ -154,28 +154,56 @@ globalThis.CylinderMechanics = (() => {
       );
     }
     function eye(outer, inner, depth, style, j, x, y, z) {
-      const shape = new T.Shape();
-      // Keep the journal bore, outer diameter and overall thickness at their nominal dimensions.
+      const half = depth / 2;
       const bevel = compact ? 0 : Math.min(0.48, (outer - inner) * 0.15, depth * 0.16);
-      shape.absarc(0, 0, outer - bevel, 0, turn, false);
-      const hole = new T.Path();
-      hole.absarc(0, 0, inner + bevel, 0, turn, true);
-      shape.holes.push(hole);
-      add(
-        new T.ExtrudeGeometry(shape, {
-          depth: depth - 2 * bevel,
-          bevelEnabled: bevel > 0,
-          bevelSize: bevel,
-          bevelThickness: bevel,
-          bevelSegments: 2,
-          curveSegments: compact ? 9 : 18,
-        }),
-        style,
-        j,
-        x,
-        y,
-        z - depth / 2 + bevel,
-      );
+      const segments = compact ? (outer > 12 ? 22 : 14) : outer > 12 ? 64 : 36;
+      // Revolve the true bore profile. Split adjacent faces for sharp chamfers;
+      // analytic radial normals keep each polished journal continuous around its axis.
+      const profile = bevel
+        ? [
+            [inner, -half + bevel],
+            [inner + bevel, -half],
+            [outer - bevel, -half],
+            [outer, -half + bevel],
+            [outer, half - bevel],
+            [outer - bevel, half],
+            [inner + bevel, half],
+            [inner, half - bevel],
+          ]
+        : [
+            [inner, -half],
+            [outer, -half],
+            [outer, half],
+            [inner, half],
+          ];
+      const xyz = [],
+        normals = [],
+        indices = [];
+      for (let i = 0; i < profile.length; i++) {
+        const a = profile[i],
+          b = profile[(i + 1) % profile.length];
+        const dr = b[0] - a[0],
+          dz = b[1] - a[1],
+          length = Math.hypot(dr, dz);
+        const base = xyz.length / 3;
+        for (let k = 0; k < segments; k++) {
+          const angle = (k * turn) / segments,
+            c = Math.cos(angle),
+            s = Math.sin(angle);
+          for (const [r, h] of [a, b]) {
+            xyz.push(r * c, r * s, h);
+            normals.push((dz * c) / length, (dz * s) / length, -dr / length);
+          }
+          const k0 = base + 2 * k,
+            k1 = base + 2 * ((k + 1) % segments);
+          indices.push(k0, k1, k0 + 1, k1, k1 + 1, k0 + 1);
+        }
+      }
+      const g = new T.BufferGeometry();
+      g.setAttribute("position", new T.Float32BufferAttribute(xyz, 3));
+      g.setAttribute("normal", new T.Float32BufferAttribute(normals, 3));
+      g.setIndex(indices);
+      add(g, style, j, x, y, z);
     }
     const wallStart = 0.31 * Math.PI,
       wallArc = 1.38 * Math.PI;
@@ -298,11 +326,11 @@ globalThis.CylinderMechanics = (() => {
       }
       const flange = new T.ExtrudeGeometry(face, {
         depth: 3,
-        bevelEnabled: true,
+        bevelEnabled: !compact,
         bevelThickness: 0.45,
         bevelSize: 0.5,
         bevelSegments: 1,
-        curveSegments: 12,
+        curveSegments: compact ? 6 : 12,
       });
       add(flange, satin, 0, side * mouth, 23, -6, 0, (side * Math.PI) / 2);
     }
@@ -335,11 +363,11 @@ globalThis.CylinderMechanics = (() => {
     add(
       new T.ExtrudeGeometry(castingShape, {
         depth: 9,
-        bevelEnabled: true,
+        bevelEnabled: !compact,
         bevelThickness: 1.4,
         bevelSize: 1.4,
         bevelSegments: 1,
-        curveSegments: 12,
+        curveSegments: compact ? 6 : 12,
       }),
       casting,
       0,
@@ -865,9 +893,13 @@ globalThis.CylinderMechanics = (() => {
           varying vec3 N, C, finish, partPos, world;
           varying float body;
           void main() {
-            mat4 j = joints[int(joint + .5)];
-            world = jointPosition(j);
-            N = mat3(j) * normal;
+            world = position;
+            N = normal;
+            if (joint > .5) {
+              mat4 j = joints[int(joint + .5)];
+              world = jointPosition(j);
+              N = mat3(j) * normal;
+            }
             keyCoord = (keyProjection * vec4(world + .48 * N, 1.)).xyz * .5 + .5;
             C = color;
             finish = surface.xyz;
