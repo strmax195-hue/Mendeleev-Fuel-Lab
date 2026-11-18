@@ -1,6 +1,6 @@
 # Candidate discovery dossier · EtOH 1 / IPA 96 / Water 3
 
-Generation 5 · model `557c04fef7a3e4d2` · record `pareto`.
+Generation 6 · model `ab1c8d57d86fc396` · record `historical re-evaluation`.
 
 Per mole of blend, the mean elemental inventory is **C 2.90 H 7.80 O 1.00**. All fractions below are molar.
 
@@ -36,31 +36,3 @@ python3 -m engine.discovery_solver --verify eth1-ipa96-water3
 ```
 
 A simulation record warrants independent verification. Fuel compatibility, in-cylinder kinetics, engine-out and aftertreatment emissions, phase behaviour and pathway energy require separate validation.
-
-<!-- fuel-lab stage2 begin -->
-## Stage 2 survival certificate
-
-Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material verdict **Minor Seal Swap (EPDM/PTFE O-rings)**. Laboratory and OEM validation are outstanding.
-
-| Screen | Result |
-|---|---|
-| Liquid–liquid split / solid or cloud risk | 0 / 0 of 86 temperatures |
-| Four-volume RVP proxy at 37.8 °C | 13.08 kPa |
-| −35 °C cold-cranking index | 0.028 |
-| +50 °C rail / inlet margins | 324.73 / 61.06 kPa |
-| Ambient dynamic viscosity at +20 °C | 2.350 mPa·s |
-| Estimated wear before / after | 670 / 670 µm |
-| Added bio-ester | 0.0% of final liquid volume |
-| Wheel energy / invested primary energy at +15 °C | 50.17 / 113.97 MJ per 100 km |
-| Wheel EROI / upstream primary energy at +15 °C | 0.440 / 113.97 MJ per 100 km |
-| Primary energy at −35 / +50 °C, engine running | 130.15 / 105.63 MJ per 100 km |
-| Synthesis electricity at +15 °C | 5.20 kWh per 100 km |
-
-**Failed gates** · Insufficient −35 °C cranking volatility, Wear proxy exceeds pump screen, Wheel EROI below 1, Upstream primary energy exceeds AI-95.
-
-**Further evidence** · Pathway / ester supply needs capacity evidence.
-
-Stage 1 `557c04fef7a3e4d2` · Stage 2 SHA-256 `aa92dd4178d595636e47e5934658ce72e9152b4d423a6c9a433f9b91ca0eb07b`.
-
-Reproduce the physical sector with `python cli/local_worker.py --start 104 --count 1`. [Read all 86 temperatures](../data/weather/eth1-ipa96-water3.json) · [Find the source revision](../data/stage2-manifest.json).
-<!-- fuel-lab stage2 end -->

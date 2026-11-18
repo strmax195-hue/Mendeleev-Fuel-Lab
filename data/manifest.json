@@ -1,6 +1,6 @@
 {
-  "model": "557c04fef7a3e4d2",
-  "source_commit": "dff2fce04ee0730ef6612fa5966f825f3841dde6",
-  "sources": "https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/dff2fce04ee0730ef6612fa5966f825f3841dde6/SOURCES.md",
-  "verification": "git checkout dff2fce04ee0730ef6612fa5966f825f3841dde6"
+  "model": "ab1c8d57d86fc396",
+  "source_commit": "815af0332a673141e9ba4bf37d3a860a399a9457",
+  "sources": "https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/815af0332a673141e9ba4bf37d3a860a399a9457/SOURCES.md",
+  "verification": "git checkout 815af0332a673141e9ba4bf37d3a860a399a9457"
 }

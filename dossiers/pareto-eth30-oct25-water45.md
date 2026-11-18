@@ -1,6 +1,6 @@
 # Candidate discovery dossier · EtOH 30 / OctOH 25 / Water 45
 
-Generation 5 · model `557c04fef7a3e4d2` · record `pareto`.
+Generation 6 · model `ab1c8d57d86fc396` · record `pareto`.
 
 Per mole of blend, the mean elemental inventory is **C 2.60 H 7.20 O 1.00**. All fractions below are molar.
 
@@ -40,7 +40,7 @@ A simulation record warrants independent verification. Fuel compatibility, in-cy
 <!-- fuel-lab stage2 begin -->
 ## Stage 2 survival certificate
 
-Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material verdict **Incompatible**. Laboratory and OEM validation are outstanding.
+Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material verdict **Incompatible**. Full-envelope installation **Minor Seal Swap (EPDM/PTFE + Stainless)** (PTFE). Laboratory and OEM validation are outstanding.
 
 | Screen | Result |
 |---|---|
@@ -56,11 +56,11 @@ Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material 
 | Primary energy at −35 / +50 °C, engine running | 206.12 / 167.29 MJ per 100 km |
 | Synthesis electricity at +15 °C | 5.33 kWh per 100 km |
 
-**Failed gates** · Liquid–liquid split, Crystallisation / cloud point, Stock wetted metals or seal system unsuitable / unqualified, Wheel EROI below 1, Upstream primary energy exceeds AI-95.
+**Failed gates** · Liquid–liquid split, Crystallisation / cloud point, Wheel EROI below 1, Upstream primary energy exceeds AI-95.
 
 **Further evidence** · Phase envelope needs bench data, Cranking volatility unavailable in the cold phase state, Pathway / ester supply needs capacity evidence.
 
-Stage 1 `557c04fef7a3e4d2` · Stage 2 SHA-256 `aa92dd4178d595636e47e5934658ce72e9152b4d423a6c9a433f9b91ca0eb07b`.
+Stage 1 `ab1c8d57d86fc396` · Stage 2 SHA-256 `6b3e26597bc282100e4e73a21d6e0f612de247216ba83e5f57170fa47245b606`.
 
-Reproduce the physical sector with `python cli/local_worker.py --start 328 --count 1`. [Read all 86 temperatures](../data/weather/eth30-oct25-water45.json) · [Find the source revision](../data/stage2-manifest.json).
+Reproduce the physical sector with `python cli/local_worker.py --start 442 --count 1`. [Read all 86 temperatures](../data/weather/eth30-oct25-water45.json) · [Find the source revision](../data/stage2-manifest.json).
 <!-- fuel-lab stage2 end -->
