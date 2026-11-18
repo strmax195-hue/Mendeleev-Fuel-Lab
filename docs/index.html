@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="description"
+      content="An open automotive thermodynamics observatory for liquid fuel range, lifecycle carbon and production cost."
+    />
+    <meta property="og:title" content="Mendeleev Fuel Lab · Liquid fuel observatory" />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/strmax195-hue/Mendeleev-Fuel-Lab/main/assets/social-preview.png"
+    />
+    <title>Liquid fuel observatory · Mendeleev Fuel Lab</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="model.js"></script>
+    <script defer src="seed.js"></script>
+    <script defer src="thermo.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to observatory</a>
+    <header class="mast">
+      <div class="wrap mast-inner">
+        <a href="#main" class="brand" aria-label="Mendeleev Fuel Lab home"
+          ><span class="mark" aria-hidden="true"
+            >M<span class="arrow" aria-hidden="true"></span></span
+          ><span>Mendeleev <strong>Fuel Lab</strong></span></a
+        >
+        <nav aria-label="Main navigation">
+          <a href="#elements">Periodic map</a><a href="#explorer">Frontier</a
+          ><a href="#bench">Blend lab</a><a href="#race">Tank race</a>
+        </nav>
+        <div class="mast-tools">
+          <button
+            id="theme"
+            class="icon"
+            aria-label="Switch colour theme"
+            title="Switch colour theme"
+          >
+            ◐</button
+          ><a class="source" href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab"
+            >GitHub <span class="arrow" aria-hidden="true"></span
+          ></a>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="intro">
+            <div class="overline"><span class="signal"></span> Automotive thermodynamics</div>
+            <h1>Liquid fuel<br /><em>observatory.</em></h1>
+            <p>
+              Explore how far a 50-litre tank can go, what the fuel costs to produce and what leaves
+              the tailpipe.
+            </p>
+            <a class="hero-link" href="#bench"
+              >Open blend laboratory <span class="arrow" aria-hidden="true"></span
+            ></a>
+          </div>
+          <figure class="indicator">
+            <figcaption><span>Cylinder indicator</span><small>AI-95 · OTTO</small></figcaption>
+            <svg
+              id="hero-pv"
+              viewBox="0 0 465 193"
+              role="img"
+              aria-label="Calculated pressure volume cycle"
+            ></svg>
+            <div class="plot-foot">
+              <span><i></i> P–V cycle</span><span id="peak-caption"></span>
+            </div>
+          </figure>
+        </div>
+      </section>
+      <div class="wrap">
+        <div class="telemetry" aria-label="Survey summary">
+          <div>
+            <span>Periodic space explored</span><strong id="stat-progress"></strong>
+            <div class="micro-track"><i id="progress-bar"></i></div>
+            <small id="count"></small>
+          </div>
+          <div>
+            <span>Eco-Affordability leader</span><strong id="stat-index"></strong
+            ><small id="index-label"></small>
+          </div>
+          <div>
+            <span>Longest projected range</span><strong id="stat-range"></strong
+            ><small>50 L · sedan · 110 km/h</small>
+          </div>
+          <div>
+            <span>Pareto frontier</span><strong id="stat-front"></strong
+            ><small id="front-label"></small>
+          </div>
+        </div>
+        <div class="data-line">
+          <span class="status-dot"></span
+          ><span id="feed" role="status">Loading calculated seed</span
+          ><span class="data-aside">Survey interval · 20 min</span>
+        </div>
+        <section id="elements" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Element atlas</div>
+              <h2>Periodic fuel map</h2>
+            </div>
+            <span class="subtle">Select an element to inspect its role.</span>
+          </div>
+          <div class="atlas-layout">
+            <div class="panel atlas-panel">
+              <div class="legend">
+                <span><i class="sw carrier"></i>Fuel constituent</span
+                ><span><i class="sw material"></i>Curated context</span
+                ><span><i class="sw other"></i>Reference</span>
+              </div>
+              <div class="map-scroll" tabindex="0" aria-label="Scrollable periodic table">
+                <div
+                  id="periodic"
+                  class="periodic"
+                  role="group"
+                  aria-label="Periodic table of elements"
+                ></div>
+              </div>
+            </div>
+            <aside class="element-card" id="element-detail" aria-live="polite"></aside>
+          </div>
+        </section>
+        <section id="explorer" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Discovery results</div>
+              <h2>Pareto frontier explorer</h2>
+            </div>
+            <span class="subtle">Sedan · 110 km/h · 50 L</span>
+          </div>
+          <div class="explore-layout">
+            <div class="panel chart-card">
+              <div class="panel-title">
+                <h3>Cost against range</h3>
+                <label class="compact"
+                  ><input id="front-only" type="checkbox" /> Frontier only</label
+                >
+              </div>
+              <svg
+                id="scatter"
+                viewBox="0 0 610 296"
+                role="group"
+                aria-label="Range and production cost. Select a point to inspect a candidate."
+              ></svg>
+              <div class="chart-key">
+                <span>Lifecycle CO₂e/km</span><i></i><span>Lower → higher</span><b>◇</b
+                ><span>Road reference</span>
+              </div>
+            </div>
+            <aside class="panel pick-card">
+              <div class="eyebrow">Selected result</div>
+              <h3 id="pick-name"></h3>
+              <dl id="pick-metrics"></dl>
+              <button id="send-race" class="button outline">Compare in tank race</button>
+            </aside>
+          </div>
+          <div class="panel ranking">
+            <div class="panel-title">
+              <h3>Alternative fuel leaderboard</h3>
+              <label class="compact"
+                >Rank by
+                <select id="rank">
+                  <option value="index">Eco-Affordability</option>
+                  <option value="cost">Production cost</option>
+                  <option value="climate">Lifecycle CO₂e</option>
+                  <option value="range">Tank range</option>
+                </select></label
+              >
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Liquid candidate</th>
+                    <th>Index</th>
+                    <th>Range, km</th>
+                    <th>$/100 km</th>
+                    <th>g CO₂e/km</th>
+                  </tr>
+                </thead>
+                <tbody id="leaders"></tbody>
+              </table>
+            </div>
+            <p class="note" id="anomalies"></p>
+          </div>
+        </section>
+        <section id="bench" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Thermodynamic simulator</div>
+              <h2>Liquid blend laboratory</h2>
+            </div>
+            <span class="subtle">Runs locally · 1 mol% increments</span>
+          </div>
+          <div class="bench-layout">
+            <div class="panel controls">
+              <label for="family">Liquid family</label
+              ><select id="family">
+                <option value="0">Alcohols &amp; water</option>
+                <option value="1">Ethanol &amp; dimethyl carbonate</option>
+                <option value="2">Waste-oil biodiesel</option>
+                <option value="3">1-Octanol</option>
+                <option value="4">Measured reverse microemulsion</option>
+              </select>
+              <div id="fractions"></div>
+              <div class="stack-bar" id="mixture-bar"></div>
+              <label for="cycle">Comparison cycle</label
+              ><select id="cycle">
+                <option>Otto</option>
+                <option>Diesel</option>
+              </select>
+              <p class="note">
+                The microemulsion preset uses the published neutral octanol–ethanol–water
+                composition. The other water sliders describe dissolved water.
+              </p>
+            </div>
+            <div class="panel bench-output">
+              <div class="panel-title">
+                <h3>Calculated blend</h3>
+                <span id="phase" class="pill"></span>
+              </div>
+              <div id="bench-numbers" class="number-grid"></div>
+              <svg
+                id="bench-pv"
+                viewBox="0 0 465 193"
+                role="img"
+                aria-label="Calculated blend indicator diagram"
+              ></svg>
+              <div id="bench-extra" class="details"></div>
+            </div>
+          </div>
+        </section>
+        <section id="race" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Virtual fuel pump</div>
+              <h2>50 L tank race</h2>
+            </div>
+            <span class="subtle">Level highway · steady speed</span>
+          </div>
+          <div class="panel race-panel">
+            <div class="race-controls">
+              <label>Vehicle class<select id="vehicle"></select></label
+              ><label
+                >Road speed<select id="speed">
+                  <option value="90">90 km/h</option>
+                  <option value="110" selected>110 km/h</option>
+                </select></label
+              ><label>Lane A<select id="lane-a"></select></label
+              ><label>Lane B<select id="lane-b"></select></label>
+            </div>
+            <div class="lanes" id="lanes"></div>
+            <p class="note">
+              Engineering projections for a level road. Thermal scores and equilibrium NO describe
+              the cylinder. Actual range, knock and regulated tailpipe emissions require engine and
+              vehicle testing.
+            </p>
+          </div>
+        </section>
+        <div class="method">
+          <div>
+            <div class="eyebrow">Model &amp; scope</div>
+            <h3>Read the assumptions behind the numbers.</h3>
+            <p>
+              Idealised combustion, historical production-cost scenarios and pathway-specific
+              lifecycle inventories. Ordinary automotive liquids are flammable. Simulation use only.
+            </p>
+          </div>
+          <a
+            class="button outline"
+            href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/SOURCES.md"
+            >Data &amp; methods <span class="arrow" aria-hidden="true"></span
+          ></a>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <div class="wrap">
+        <span>Mendeleev Fuel Lab</span
+        ><a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/LICENSE"
+          >MIT licence</a
+        >
+      </div>
+    </footer>
+    <noscript
+      >JavaScript runs the interactive lab. The README contains the live SVG map, frontier and
+      reference results.</noscript
+    >
+  </body>
+</html>
