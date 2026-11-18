@@ -41,6 +41,12 @@ class CutawayPhysics(unittest.TestCase):
     def test_ignition_knock_optics_and_open_cylinder_energy_balance(self):
         self.javascript("combustion")
 
+    def test_burned_front_matches_independent_chamber_volume_integral(self):
+        self.javascript("front")
+
+    def test_signed_port_tracers_follow_donor_volume_and_valve_closure(self):
+        self.javascript("ports")
+
     def test_three_geometry_and_shader_uniforms_follow_calculated_events(self):
         self.javascript("rig")
 

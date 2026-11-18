@@ -346,8 +346,26 @@ globalThis.CylinderModel = (() => {
         k4 = rates(a + dt, shift(k3, dt));
       state = state.map((v, i) => v + (dt * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])) / 6);
     }
+    // Integrate signed donor-volume flux at the two port throats. Positive is
+    // out of the chamber. This diagnostic uses the same pressure and curtain flow as RK4.
+    const ports = [
+      ["intake", vi, op.x.p, op.x.t],
+      ["exhaust", ve, ATM, portT],
+    ].map(([name, valve, portP, portTemp]) => {
+      let through = 0,
+        previous = 0;
+      return grid.map(({ a, p, t }, i) => {
+        const mass = flow(p, t, portP, portTemp, aperture(valve, lift(name, a)));
+        const rho = mass >= 0 ? p / (R * t) : portP / (R * portTemp);
+        const rate = mass / rho;
+        if (i) through += (previous + rate) * 0.5 * sec;
+        previous = rate;
+        return { rate, through };
+      });
+    });
     return {
       grid,
+      ports,
       residualJ: initial * cv * first.t - state[1] * cv * state[0] - state[2] - state[3] - state[4],
     };
   }
@@ -433,6 +451,20 @@ globalThis.CylinderModel = (() => {
       acoustic,
       cooling: diesel ? s.latent / (1006 * s.afr * op.x.lam) : op.x.after - op.x.t,
       openResidualJ: open.residualJ,
+      ports: open.ports,
+    };
+  }
+  function portState(lane, index, angle) {
+    const a = angle < 0 ? angle + 720 : angle;
+    const trace = lane.ports[index];
+    if (a < 135 || a > 570) return { rate: 0, through: 0 };
+    const i = Math.min(trace.length - 2, Math.floor(a - 135)),
+      t = a - 135 - i;
+    const lo = trace[i],
+      hi = trace[i + 1];
+    return {
+      rate: lo.rate + t * (hi.rate - lo.rate),
+      through: lo.through + t * (hi.through - lo.through),
     };
   }
   function sample(lane, angle) {
@@ -468,5 +500,17 @@ globalThis.CylinderModel = (() => {
                   : "expansion",
     };
   }
-  return { valves, lift, travel, volume, fuel, operating, integrate, build, sample };
+  return {
+    valves,
+    lift,
+    travel,
+    volume,
+    fuel,
+    operating,
+    integrate,
+    build,
+    sample,
+    portState,
+    isentropicExponent: (gamma - 1) / gamma,
+  };
 })();

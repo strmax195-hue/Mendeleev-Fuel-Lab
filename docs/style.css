@@ -1283,25 +1283,81 @@ footer .wrap {
   color: var(--ink);
   border-color: var(--line);
 }
-#cyl-status {
+#cyl-viewer:fullscreen {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  padding: clamp(8px, 2vw, 24px);
+  background: var(--paper);
+  color: var(--ink);
+}
+#cyl-viewer:fullscreen #cyl-stage {
+  flex: 1 0 min(35vh, 240px);
+  height: auto;
+}
+.cyl-display,
+.cyl-display label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cyl-display label {
+  font: 600 0.72rem var(--body);
   color: var(--muted);
-  font: 500 0.72rem var(--mono);
+}
+.cyl-display select,
+.cyl-display button {
+  color: var(--ink);
+  font: 600 0.76rem var(--body);
+  background: var(--paper);
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.cyl-display button {
+  cursor: pointer;
+}
+.cyl-display {
+  flex-wrap: wrap;
+}
+.cyl-display button[aria-pressed="true"] {
+  background: var(--pale);
+}
+#cyl-status {
+  position: absolute;
+  right: 9px;
+  bottom: 7px;
+  pointer-events: none;
+  font: 500 0.64rem var(--mono);
   font-variant-numeric: tabular-nums;
+  color: #b4c1c9;
+  background: #10191fdf;
+  padding: 3px 6px;
+  border-radius: 3px;
 }
 #cyl-stage {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-radius: 5px;
-  height: clamp(360px, 48vw, 510px);
-  border: 1px solid #42575d;
-  background: radial-gradient(
-    ellipse at 50% 25%,
-    #35474a 0%,
-    #24353a 38%,
-    #152429 75%,
-    #101d21 100%
-  );
+  border-radius: 6px;
+  height: clamp(378px, 49vw, 526px);
+  border: 1px solid #38434c;
+  --bay: 50%;
+  background-color: #17212b;
+  background-image:
+    radial-gradient(ellipse 57% 10% at 50% 93%, #69788030, transparent 92%),
+    radial-gradient(ellipse 78% 80% at 44% 38%, #404b54 0%, #2d3841 40%, #1c2730 70%, #131c24 100%);
+  background-size: var(--bay) 100%;
+  background-repeat: repeat-x;
+}
+#cyl-stage:is([data-layout="candidate"], [data-layout="reference"]) {
+  --bay: 100%;
+}
+#cyl-stage:is([data-layout="candidate"], [data-layout="reference"])::after {
+  display: none;
+}
+#cyl-stage:is([data-layout="candidate"], [data-layout="reference"]) .cyl-captions {
+  grid-template-columns: 1fr;
 }
 #cyl-stage::after {
   content: "";
@@ -1333,16 +1389,23 @@ footer .wrap {
   inset: 0 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  color: #e8f1ed;
-  text-align: center;
+  color: #ecf2f4;
+  text-align: left;
   font: 600 0.8rem var(--mono);
-  padding: 10px 5px 14px;
-  background: linear-gradient(#15262ce6, transparent);
+  padding: 0;
+  background: linear-gradient(#121c25db, transparent);
 }
 .cyl-captions span {
   overflow-wrap: anywhere;
-  padding-inline: 5px;
+  margin: 10px clamp(6px, 1.2vw, 16px) 13px;
+  padding-left: 8px;
+  border-left: 2px solid #85cfc1;
+  text-shadow: 0 1px 4px #111a22;
 }
+#cyl-control {
+  border-color: #e7ad7a;
+}
+
 #cyl-camera-help {
   margin: 8px 0 16px;
 }

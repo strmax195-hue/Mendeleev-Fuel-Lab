@@ -462,55 +462,74 @@
             <span class="subtle">Synchronized candidate and road control</span>
           </div>
           <div class="panel cylinder-panel">
-            <div class="cyl-controls">
-              <label>Candidate<select id="cyl-fuel"></select></label>
-              <label
-                >Engine<select id="cyl-cycle">
-                  <option value="Otto">Otto · MPI</option>
-                  <option value="GDI">Otto · GDI turbo</option>
-                  <option value="Diesel">Diesel · common rail</option>
-                </select></label
-              >
-              <label
-                >Playback<select id="cyl-rpm">
-                  <option value="60">Slow-Mo · 60 RPM</option>
-                  <option value="800">Idle · 800 RPM</option>
-                  <option value="2000">Load · 2000 RPM</option>
-                </select></label
-              >
-              <button id="cyl-play" class="button outline" type="button">Play cycle</button>
-            </div>
-            <div class="cyl-viewbar">
-              <div class="cyl-presets" role="group" aria-label="Camera preset">
-                <button type="button" data-cyl-view="side" aria-pressed="true">Side Cutaway</button>
-                <button type="button" data-cyl-view="chamber" aria-pressed="false">
-                  Combustion Chamber Close-Up
+            <div id="cyl-viewer">
+              <div class="cyl-controls">
+                <label>Candidate<select id="cyl-fuel"></select></label>
+                <label
+                  >Engine<select id="cyl-cycle">
+                    <option value="Otto">Otto · MPI</option>
+                    <option value="GDI">Otto · GDI turbo</option>
+                    <option value="Diesel">Diesel · common rail</option>
+                  </select></label
+                >
+                <label
+                  >Playback<select id="cyl-rpm">
+                    <option value="60">Slow-Mo · 60 RPM</option>
+                    <option value="800">Idle · 800 RPM</option>
+                    <option value="2000">Load · 2000 RPM</option>
+                  </select></label
+                >
+                <button id="cyl-play" class="button outline" type="button">Play cycle</button>
+              </div>
+              <div class="cyl-viewbar">
+                <div class="cyl-presets" role="group" aria-label="Camera preset">
+                  <button type="button" data-cyl-view="side" aria-pressed="true">
+                    Side Cutaway
+                  </button>
+                  <button type="button" data-cyl-view="chamber" aria-pressed="false">
+                    Combustion Chamber Close-Up
+                  </button>
+                  <button type="button" data-cyl-view="crank" aria-pressed="false">
+                    Crankshaft
+                  </button>
+                  <button type="button" data-cyl-view="iso" aria-pressed="false">Isometric</button>
+                </div>
+                <div class="cyl-display">
+                  <label
+                    >Viewport
+                    <select id="cyl-layout">
+                      <option value="pair">Side by side</option>
+                      <option value="candidate">Candidate only</option>
+                      <option value="reference">Road control only</option>
+                    </select>
+                  </label>
+                  <button id="cyl-tracers" type="button" aria-pressed="true">Flow tracers</button>
+                  <button id="cyl-fullscreen" type="button" hidden>Full screen</button>
+                </div>
+              </div>
+              <div id="cyl-stage">
+                <canvas
+                  id="cyl-canvas"
+                  tabindex="0"
+                  aria-describedby="cyl-camera-help"
+                  aria-label="Orbit the cylinder cutaway"
+                ></canvas>
+                <div class="cyl-captions">
+                  <span id="cyl-label"></span><span id="cyl-control"></span>
+                </div>
+                <span id="cyl-status">Loading cutaway</span>
+              </div>
+              <p id="cyl-camera-help" class="note">
+                Drag to orbit. Scroll or pinch to zoom. Right-drag or use two fingers to pan.
+                Keyboard + / − zooms, Home restores the side view.
+              </p>
+              <div class="cyl-scrub">
+                <label for="cyl-angle">Crank angle · <output id="cyl-deg">10°</output></label>
+                <input id="cyl-angle" type="range" min="-360" max="360" value="10" step="1" />
+                <button id="cyl-inspect" type="button" class="button outline">
+                  Inspect ignition
                 </button>
-                <button type="button" data-cyl-view="iso" aria-pressed="false">Isometric</button>
               </div>
-              <span id="cyl-status">Loading cutaway</span>
-            </div>
-            <div id="cyl-stage">
-              <canvas
-                id="cyl-canvas"
-                tabindex="0"
-                aria-describedby="cyl-camera-help"
-                aria-label="Orbit the paired cylinder cutaways"
-              ></canvas>
-              <div class="cyl-captions">
-                <span id="cyl-label"></span><span id="cyl-control"></span>
-              </div>
-            </div>
-            <p id="cyl-camera-help" class="note">
-              Drag to orbit. Scroll or pinch to zoom. Right-drag or use two fingers to pan. Keyboard
-              + / − zooms, Home restores the side view.
-            </p>
-            <div class="cyl-scrub">
-              <label for="cyl-angle">Crank angle · <output id="cyl-deg">10°</output></label>
-              <input id="cyl-angle" type="range" min="-360" max="360" value="10" step="1" />
-              <button id="cyl-inspect" type="button" class="button outline">
-                Inspect ignition
-              </button>
             </div>
             <div class="cyl-instruments" id="cyl-values">
               <div>

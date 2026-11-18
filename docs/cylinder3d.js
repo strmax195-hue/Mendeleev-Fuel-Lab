@@ -8,10 +8,13 @@ globalThis.FuelCylinder = (() => {
     angle = $("cyl-angle"),
     play = $("cyl-play"),
     speed = $("cyl-rpm"),
+    layout = $("cyl-layout"),
+    flowToggle = $("cyl-tracers"),
     inspect = $("cyl-inspect");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)"),
     narrow = matchMedia("(max-width: 620px)");
   const cache = new Map(),
+    rigCache = new Map(),
     names = ["candidate", "reference"],
     presets = [...document.querySelectorAll("[data-cyl-view]")];
   let survey,
@@ -25,7 +28,7 @@ globalThis.FuelCylinder = (() => {
     rig,
     optics,
     engineKey,
-    compactGeometry = narrow.matches;
+    compactGeometry = false;
   let loading = false,
     visible = false,
     lost = false,
@@ -42,7 +45,11 @@ globalThis.FuelCylinder = (() => {
     canvasW = 1,
     canvasH = 1,
     dirty = true,
-    compiled = false;
+    compiled = false,
+    fastLight = false,
+    showFlow = true,
+    measured = false,
+    headroom = 0;
   let transition = null,
     preset = "side",
     halfHeight = 150;
@@ -151,35 +158,55 @@ globalThis.FuelCylinder = (() => {
     });
   }
   function setEngine(key, keepView = false) {
-    if (rig) {
-      scene.remove(rig.scene, optics.group);
-      disposal(rig.scene);
-      disposal(optics.group);
+    const compact = active && fastLight;
+    if (rig && key === engineKey && compact === compactGeometry) return;
+    if (rig) scene.remove(rig.scene, optics.group);
+    if (engineKey !== key) {
+      for (const entry of rigCache.values()) {
+        entry.rig.shadows.dispose();
+        disposal(entry.rig.scene);
+        disposal(entry.optics.group);
+      }
+      rigCache.clear();
     }
+    compactGeometry = compact;
     engineKey = key;
-    rig = CylinderMechanics.build(T, CYLINDER_INPUTS.engines[key], compactGeometry);
-    optics = CylinderOptics.build(T, rig);
+    if (!rigCache.has(compact)) {
+      const hardware = CylinderMechanics.build(T, CYLINDER_INPUTS.engines[key], compact);
+      rigCache.set(compact, { rig: hardware, optics: CylinderOptics.build(T, hardware) });
+    }
+    ({ rig, optics } = rigCache.get(compact));
     scene.add(rig.scene, optics.group);
     if (!keepView) resize();
   }
+  const sideBySide = () => layout.value === "pair";
+  const viewAspect = () => canvasW / ((sideBySide() ? 2 : 1) * canvasH);
   function frameHeight() {
-    const aspect = canvasW / (2 * canvasH);
-    return Math.max((rig.camY - rig.axle + 60) / 2, (rig.bore / 2 + 19) / aspect);
+    return Math.max((rig.camY + 38 - rig.bottom + 17) / 2, (rig.halfWidth + 4) / viewAspect());
   }
   function setPreset(key, instant = false) {
     preset = key;
     presets.forEach((p) => p.setAttribute("aria-pressed", String(p.dataset.cylView === key)));
     if (!camera || !rig) return;
     const close = key === "chamber",
+      crank = key === "crank",
       iso = key === "iso",
-      aspect = canvasW / (2 * canvasH);
-    const target = new T.Vector3(0, close ? 0 : (rig.camY + rig.axle - 20) / 2, 0);
+      aspect = viewAspect();
+    const target = new T.Vector3(
+      0,
+      close ? -12 : crank ? rig.axle + 10 : (rig.camY + 38 + rig.bottom - 17) / 2,
+      0,
+    );
     const direction = new T.Vector3(
-      iso ? 0.81 : close ? 0.22 : 0.12,
-      iso ? 0.4 : close ? 0.24 : 0.11,
+      iso ? 0.8 : crank ? -0.42 : close ? 0.29 : 0.3,
+      iso ? 0.43 : close ? 0.19 : 0.17,
       1,
     ).normalize();
-    const zoom = close ? frameHeight() / Math.max(43, (rig.bore / 2 + 4) / aspect) : iso ? 0.96 : 1;
+    const zoom =
+      close || crank
+        ? frameHeight() /
+          Math.max(crank ? 74 : 43, (crank ? rig.halfWidth : rig.bore / 2 + 6) / aspect)
+        : 1;
     const pos = target.clone().addScaledVector(direction, 520);
     if (instant || reduced.matches) {
       transition = null;
@@ -208,7 +235,7 @@ globalThis.FuelCylinder = (() => {
     canvasW = stage.clientWidth;
     canvasH = stage.clientHeight;
     if (!canvasW || !canvasH) return;
-    const aspect = canvasW / (2 * canvasH);
+    const aspect = viewAspect();
     halfHeight = rig ? frameHeight() : 160;
     camera.left = -halfHeight * aspect;
     camera.right = -camera.left;
@@ -220,6 +247,7 @@ globalThis.FuelCylinder = (() => {
     dirty = true;
     request();
   }
+  const motionPixelLimit = () => Math.min(devicePixelRatio, narrow.matches ? 1.1 : 1.4);
   function graphics() {
     T = globalThis.THREE;
     dir = new T.Vector3();
@@ -235,8 +263,8 @@ globalThis.FuelCylinder = (() => {
     });
     renderer.setClearColor(0, 0);
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
-    ratio = Math.min(devicePixelRatio, narrow.matches ? 0.85 : 1.1);
+    renderer.toneMappingExposure = 0.98;
+    ratio = motionPixelLimit();
     playbackRatio = ratio;
     renderer.setPixelRatio(ratio);
     renderer.setScissorTest(true);
@@ -272,6 +300,7 @@ globalThis.FuelCylinder = (() => {
     });
     $("cyl-canvas").addEventListener("webglcontextrestored", () => {
       lost = false;
+      for (const { rig: hardware } of rigCache.values()) hardware.shadows.invalidate();
       dirty = true;
       $("cyl-status").textContent = "Three.js cutaway · ready";
       request();
@@ -298,7 +327,12 @@ globalThis.FuelCylinder = (() => {
     saved.copy(camera.position);
     const half = Math.floor(canvasW / 2),
       scale = (canvasH * camera.zoom * ratio) / (2 * halfHeight);
-    for (let i = 0; i < 2; i++) {
+    const pair = sideBySide();
+    for (
+      let i = layout.value === "reference" ? 1 : 0;
+      i < (layout.value === "candidate" ? 1 : 2);
+      i++
+    ) {
       const lane = lanes[i],
         s = model.sample(lane, nowAngle);
       let shock = s.knockAge >= 0 && s.knockAge < 0.0045 ? s.knockAge : -1;
@@ -322,9 +356,12 @@ globalThis.FuelCylinder = (() => {
         );
         camera.updateMatrixWorld();
       }
-      optics.apply(lane, s, nowAngle, dir, scale, shock);
-      const left = i ? half : 0,
-        width = i ? canvasW - half : half;
+      optics.apply(lane, s, nowAngle, dir, scale, shock, showFlow);
+      const economise = active && fastLight;
+      rig.shadows.uniforms.quickLight.value = economise;
+      rig.shadows.render(renderer, nowAngle, economise);
+      const left = pair && i ? half : 0,
+        width = pair ? (i ? canvasW - half : half) : canvasW;
       renderer.setViewport(left, 0, width, canvasH);
       renderer.setScissor(left, 0, width, canvasH);
       renderer.render(scene, camera);
@@ -346,7 +383,12 @@ globalThis.FuelCylinder = (() => {
     const moving = camera && view(t);
     const damping = controls?.update() || false;
     const movingView = active || moving || damping;
-    const resolution = movingView ? playbackRatio : Math.min(2, devicePixelRatio);
+    const stillRatio = Math.min(
+      2,
+      Math.max(1.6, devicePixelRatio),
+      Math.sqrt(4200000 / (canvasW * canvasH)),
+    );
+    const resolution = movingView ? playbackRatio : stillRatio;
     if (renderer && ratio !== resolution) {
       ratio = resolution;
       renderer.setPixelRatio(ratio);
@@ -366,26 +408,33 @@ globalThis.FuelCylinder = (() => {
           bucket = t;
           frames = 0;
         } else frames++;
-        if (t - bucket >= 1600) {
+        if (t - bucket >= (measured ? 1200 : 520)) {
+          measured = true;
           const fps = (1000 * frames) / (t - bucket);
           $("cyl-status").textContent = "Three.js cutaway · " + Math.round(fps) + " fps";
           if (fps < 55) {
-            const floor = narrow.matches ? 0.55 : 0.42;
-            playbackRatio = Math.max(floor, playbackRatio * Math.sqrt(fps / 60));
-            if (!compactGeometry) {
-              compactGeometry = true;
-              setEngine(engineKey, true);
+            fastLight = true;
+            headroom = 0;
+            const floor = narrow.matches ? 0.5 : 0.42;
+            playbackRatio = Math.max(floor, playbackRatio * Math.min(0.88, Math.sqrt(fps / 60)));
+            if (!compactGeometry) setEngine(engineKey, true);
+          } else if (fps >= 59.4) {
+            if (++headroom >= 4) {
+              playbackRatio = Math.min(motionPixelLimit(), playbackRatio + 0.04);
+              headroom = 0;
             }
-          }
+          } else headroom = 0;
           frames = 0;
           bucket = t;
         }
       }
     }
-    if (active || transition || damping) request();
+    if (!active && moving && !transition) dirty = true;
+    if (active || transition || damping || dirty) request();
     else lastTick = null;
   }
   function playback() {
+    if (rig) setEngine(engineKey, true);
     lastTick = null;
     lastDraw = null;
     bucket = 0;
@@ -420,6 +469,7 @@ globalThis.FuelCylinder = (() => {
     try {
       await Promise.all([
         loadScript("vendor/three.min.js").then(() => loadScript("vendor/OrbitControls.js")),
+        loadScript("cylinder-studio.js"),
         loadScript("cylinder-mechanics.js"),
         loadScript("cylinder-optics.js"),
       ]);
@@ -458,6 +508,36 @@ globalThis.FuelCylinder = (() => {
     playback();
   };
   fuel.onchange = kind.onchange = update;
+  flowToggle.onclick = () => {
+    showFlow = !showFlow;
+    flowToggle.setAttribute("aria-pressed", String(showFlow));
+    dirty = true;
+    request();
+  };
+  layout.onchange = () => {
+    $("cyl-stage").dataset.layout = layout.value;
+    $("cyl-label").hidden = layout.value === "reference";
+    $("cyl-control").hidden = layout.value === "candidate";
+    resize();
+  };
+  const viewer = $("cyl-viewer"),
+    expand = $("cyl-fullscreen");
+  if (document.fullscreenEnabled && viewer.requestFullscreen) {
+    expand.hidden = false;
+    expand.onclick = async () => {
+      try {
+        if (document.fullscreenElement === viewer) await document.exitFullscreen();
+        else await viewer.requestFullscreen();
+      } catch {
+        $("cyl-status").textContent = "Full screen unavailable in this browser";
+      }
+    };
+    document.addEventListener("fullscreenchange", () => {
+      expand.textContent =
+        document.fullscreenElement === viewer ? "Exit full screen" : "Full screen";
+      resize();
+    });
+  }
   for (const p of presets) p.onclick = () => setPreset(p.dataset.cylView);
   $("cyl-canvas").onkeydown = (e) => {
     if (!controls) return;

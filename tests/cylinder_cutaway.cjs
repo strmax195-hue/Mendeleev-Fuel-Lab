@@ -5,6 +5,7 @@ for (const script of [
   "thermo",
   "cylinder-inputs",
   "cylinder-model",
+  "cylinder-studio",
   "cylinder-mechanics",
   "cylinder-optics",
 ]) {
@@ -110,6 +111,50 @@ function combustion() {
   assert.ok(CylinderOptics.blackbody(3000)[2] > CylinderOptics.blackbody(1700)[2]);
 }
 
+// Independent midpoint quadrature of the volume cut out by the cylinder and piston.
+function frontVolume() {
+  const optical = CylinderOptics.frontRadius;
+  for (const bore of [31, 43, 51])
+    for (const height of [5.8, 12, 42, 113]) {
+      near(optical(bore, height, 0), 0);
+      near(optical(bore, height, 1), Math.hypot(bore, height));
+      let previous = 0;
+      for (const fraction of [0.00002, 0.008, 0.1, 0.37, 0.7, 0.98, 0.999996]) {
+        const radius = optical(bore, height, fraction);
+        assert.ok(radius > previous);
+        previous = radius;
+        const dy = Math.min(height, radius) / 2048;
+        let volume = 0;
+        for (let i = 0; i < 2048; i++) {
+          const y = (i + 0.5) * dy;
+          volume += dy * Math.min(bore * bore, radius * radius - y * y);
+        }
+        near(volume / (bore * bore * height), fraction, 3e-6);
+      }
+    }
+}
+
+function portFlow() {
+  const lane = M.build({ ai95: 100 }, "gdi", 2000);
+  const trace = (index, a) => M.portState(lane, index, a);
+  for (const i of [0, 1]) {
+    for (const a of [-145, -40, 0, 89, 134]) near(trace(i, a).rate, 0);
+    assert.deepEqual(trace(i, -360), trace(i, 360));
+    for (let a = 135; a < 569; a += 3) {
+      const lo = trace(i, a),
+        hi = trace(i, a + 1);
+      near(hi.through - lo.through, (lo.rate + hi.rate) / (12 * lane.rpm), 1e-14);
+      near(trace(i, a + 0.5).through, (lo.through + hi.through) / 2, 1e-14);
+    }
+  }
+  assert.ok(trace(0, -300).rate < 0);
+  assert.ok(trace(1, 165).rate > 0);
+  assert.ok(
+    lane.ports[0].some((p) => p.rate > 1e-5),
+    "intake reversion",
+  );
+}
+
 function animatedParts() {
   const T = require("../docs/vendor/three.min.js");
   const view = new T.Vector3(0, 0, -1);
@@ -149,6 +194,9 @@ function animatedParts() {
       near(u.sparkAge.value, 0);
       pose(lane.op.b.start + 10);
       near(u.radius.value, (1000 * lane.op.b.sl * 10) / (6 * lane.rpm));
+      assert.ok(u.frontRadius.value > u.radius.value);
+      assert.ok(u.frontRadius.value <= Math.hypot(rig.bore / 2, u.height.value));
+      assert.ok(rig.flameSpill.length() > 0);
       pose(lane.op.onset);
       near(u.knock.value, 0);
       near(u.frequency.value, (1.841 * u.sound.value) / (Math.PI * lane.bore));
@@ -158,14 +206,27 @@ function animatedParts() {
       near(u.diesel.value, 1);
       pose(45);
       assert.ok(u.burned.value > 0);
+      near(u.frontRadius.value, 0);
       assert.equal(lane.acoustic, null);
     }
+    pose(165);
+    const traces = effects.group.children.filter((g) => g.material.uniforms.phase);
+    assert.equal(traces.length, 2);
+    assert.ok(traces[1].visible && !traces[0].visible);
+    effects.apply(lane, M.sample(lane, 165), 165, view, 1, -1, false);
+    assert.ok(traces.every((t) => !t.visible));
+    assert.equal(flame.visible, false);
+    near(u.frontRadius.value, 0);
+    near(rig.flameSpill.length(), 0);
+    rig.shadows.dispose();
   }
 }
 
 if (process.argv[2] === "geometry") geometry();
 else if (process.argv[2] === "combustion") combustion();
 else if (process.argv[2] === "rig") animatedParts();
+else if (process.argv[2] === "front") frontVolume();
+else if (process.argv[2] === "ports") portFlow();
 else {
   const cases = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
   const outputs = cases.map(({ parts, arch, mode }) => {

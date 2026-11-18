@@ -55,7 +55,7 @@ First-generation pure liquids, including the two road controls. Range uses a 1,5
 - **Stage 2 weather and materials.** Inspect the liquid envelope, lean-limit index and the fitted seal and wetted-metal options.
 - **Stage 3 calibration.** Select an architecture to inspect its ECU grid and WLTC trace.
 - **Stage 4 planetary audit.** Compare renewable routes and compartment-specific spill half-lives, then inspect the ecological gates.
-- **3D cylinder cutaway.** Compare a blend with its road control in a DOHC cylinder. Scrub to spark, diesel ignition or predicted knock, inspect the valve train up close, and read gas and metal temperatures through the exhaust stroke. [Open the synchronized cutaway](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#cylinder)
+- **3D cylinder cutaway.** Orbit a sectioned DOHC engine, follow the crank and valve train, and watch combustion above the moving piston. Compare two fuels at the same crank angle or open one cylinder full-screen to inspect its spark, diesel jets or predicted knock. [Open the synchronized cutaway](https://strmax195-hue.github.io/Mendeleev-Fuel-Lab/#cylinder)
 
 ## Scientific scope
 
