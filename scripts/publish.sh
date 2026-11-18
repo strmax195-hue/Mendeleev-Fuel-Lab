@@ -8,9 +8,7 @@ if [[ -n "$ref" ]]; then
   git fetch --quiet --no-tags origin refs/heads/lab-data
   git worktree add --quiet --detach "$output" FETCH_HEAD
 else
-  git worktree add --quiet --detach "$output" HEAD
-  git -C "$output" checkout --quiet --orphan "lab-bootstrap-${GITHUB_RUN_ID:-local}"
-  git -C "$output" rm -rq -- .
+  git worktree add --quiet --orphan -b "lab-bootstrap-${GITHUB_RUN_ID:-local}" "$output"
 fi
 python3 -m engine.discovery_solver --output "$output" --batch "${LAB_BATCH:-24}"
 git -C "$output" add -- data assets badges
