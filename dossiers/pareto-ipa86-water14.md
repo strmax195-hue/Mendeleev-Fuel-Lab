@@ -35,3 +35,30 @@ python3 -m engine.discovery_solver --verify ipa86-water14
 ```
 
 A simulation record warrants independent verification. Fuel compatibility, in-cylinder kinetics, engine-out and aftertreatment emissions, phase behaviour and costs require separate validation.
+
+<!-- fuel-lab stage2 begin -->
+## Stage 2 survival certificate
+
+Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material verdict **Incompatible**. Laboratory and OEM validation are outstanding.
+
+| Screen | Result |
+|---|---|
+| Liquid–liquid split / solid or cloud risk | 0 / 0 of 86 temperatures |
+| Four-volume RVP proxy at 37.8 °C | 13.92 kPa |
+| −35 °C cold-cranking index | 0.026 |
+| +50 °C rail / inlet margins | 323.32 / 59.65 kPa |
+| Ambient dynamic viscosity at +20 °C | 2.147 mPa·s |
+| Estimated wear before / after | 667 / 667 µm |
+| Added bio-ester | 0.0% of final liquid volume |
+| Wheel energy / invested primary energy | 50.17 / 114.19 MJ per 100 km |
+| Wheel EROI / delivered fuel cost | 0.439 / $3.99 per 100 km |
+| Synthesis electricity (included in fuel cost) | 5.22 kWh, $0.63 per 100 km |
+
+**Failed gates** · Insufficient −35 °C cranking volatility, Stock wetted metals or seal system unsuitable / unqualified, Wear proxy exceeds pump screen, Wheel EROI below 1, Delivered cost exceeds AI-95.
+
+**Further evidence** · Pathway / ester supply needs capacity evidence.
+
+Stage 1 `7550aae150609a34` · Stage 2 SHA-256 `9e9f06ab4bcbfeed9671bccc0e09ac08426ea1a9e10cb94996f74c4b728d0cc0`.
+
+Reproduce the physical sector with `python cli/local_worker.py --start 985 --count 1`. [Read all 86 temperatures](../data/weather/ipa86-water14.json) · [Find the source revision](../data/stage2-manifest.json).
+<!-- fuel-lab stage2 end -->
