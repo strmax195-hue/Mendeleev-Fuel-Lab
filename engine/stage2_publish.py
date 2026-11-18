@@ -102,6 +102,13 @@ def build(state, previous=None, load_row=None, supplied=None):
         status: sum(rows[k]["gate"]["status"] == status for k in nominated)
         for status in ("passed", "review", "rejected")
     }
+    starts = [rows[k]["screen"]["coldStart"][str(min(TEMPS))] for k in known]
+    gdi = [
+        trial
+        for trial in starts
+        if trial["method"] == "enriched-gdi" and trial["status"] == "feasible"
+    ]
+    ci = [trial for trial in starts if trial["method"] == "glow-ci"]
     report = {
         "schema": 2,
         "model": model_hash(),
@@ -116,6 +123,11 @@ def build(state, previous=None, load_row=None, supplied=None):
             "aboveLeanLimit": sum(x >= 1 for x, _ in available),
             "bestIndex": best[0],
             "bestId": best[1],
+            "gdiFeasible": len(gdi),
+            "gdiNeedsEnrichment": sum(trial["factor"] > 1 for trial in gdi),
+            "ciCandidates": len(ci),
+            "glowFeasible": sum(trial["status"] == "feasible" for trial in ci),
+            "ciPhaseBlocked": sum(trial["status"] == "phase-blocked" for trial in ci),
         },
         "entries": hashes,
         "minC": min(TEMPS),
@@ -141,9 +153,15 @@ def certificate(record, stage1_model):
     cold, hot = s["weather"][0], s["weather"][-1]
     margin = None if hot[1] is None else RAIL_PRESSURE - hot[1]
     suction = None if hot[1] is None else PRESSURE - INLET_LOSS - hot[1]
-    starts = (
-        "compression-ignition soak test required" if s["cycle"] == "Diesel" else reading(cold[2], 3)
-    )
+    trial = s["coldStart"][str(min(TEMPS))]
+    method = "Glow-assisted CI" if trial["method"] == "glow-ci" else "Enriched GDI"
+    result = trial["status"]
+    if trial.get("factor") is not None:
+        result += f' at {trial["factor"]:.2f}× warm dose'
+    if "phi" in trial:
+        result += f', vapour φ {trial["phi"]:.3f}'
+    if trial.get("onsetAtdc") is not None:
+        result += f', pilot ignition at {trial["onsetAtdc"]:.2f}° ATDC'
     stock = s["retrofit"]["stock"]
     installation = g["installation"]
     sector = sorted(catalogue()).index(record["id"])
@@ -159,7 +177,8 @@ def certificate(record, stage1_model):
             "|---|---|",
             f"| Liquid–liquid split / solid or cloud risk | {sum(bool(w[0]&1) for w in s['weather'])} / {sum(bool(w[0]&2) for w in s['weather'])} of 86 temperatures |",
             f"| Four-volume RVP proxy at 37.8 °C | {reading(s['rvpKpa'])} kPa |",
-            f"| −35 °C cold-cranking index | {starts} |",
+            f"| −35 °C ambient SI lean-limit index | {reading(cold[2], 3) if s['cycle'] == 'Otto' else 'Compression ignition'} |",
+            f"| −35 °C first firing · {method} | {result} |",
             f"| +50 °C rail / inlet margins | {reading(margin)} / {reading(suction)} kPa |",
             f"| Ambient dynamic viscosity at +20 °C | {reading(s['weather'][55][3], 3)} mPa·s |",
             f"| Estimated wear before / after | {s['wearBeforeUm']:.0f} / {s['wearUm']:.0f} µm |",

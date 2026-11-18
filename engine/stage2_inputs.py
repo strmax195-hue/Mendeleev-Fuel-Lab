@@ -54,3 +54,17 @@ DELIVERY_MJ = 0.70  # primary MJ/kg distributed fuel
 MIN_EROI = 1.0  # tractive wheel energy / external invested primary energy
 # Evidence for scalable supply of the specific upstream pathway.
 SUPPLY_REVIEW = {"ipa", "oct", "dmc", "b100"}
+
+# First-firing scenarios. See STAGE2.md for calibration domains and sources.
+START_DOSES = (1.0, 1.5, 2.0, 2.5, 3.0)
+GDI_FILM = 0.35
+GLOW_TIP_K = 1173.15
+# Reference liquid heat capacity, J/(mol K), held constant during charge preparation.
+LIQUID_CP = {
+    "eth": 112.15,
+    "ipa": 154.75,
+    "dmc": 165.06,
+    "water": 75.3,
+    "oct": 304.0,
+    "ai95": 238.57,
+}

@@ -9,6 +9,8 @@ from pathlib import Path
 
 from .elements_db import CEA, MODEL, STOCKS
 from .fuel_simulator import validate
+from .fuel_quality import QUALITY
+from .ignition import ENGINES, ci_delay, livengood_wu, relative_volume
 from .materials_db import (
     HARDWARE,
     MATERIALS,
@@ -23,6 +25,10 @@ from .stage2_inputs import (
     DOSES,
     GRID_PRIMARY,
     INLET_LOSS,
+    GDI_FILM,
+    GLOW_TIP_K,
+    LIQUID_CP,
+    START_DOSES,
     MIN_EROI,
     PAIRS,
     PRESSURE,
@@ -56,6 +62,8 @@ def model_hash():
         "engine/stage2_survival.py",
         "engine/stage2_inputs.py",
         "engine/materials_db.py",
+        "engine/fuel_quality.py",
+        "engine/ignition.py",
         "engine/elements_db.py",
         "engine/fuel_simulator.py",
         "engine/discovery_solver.py",
@@ -232,6 +240,157 @@ def cranking_index(partial):
     )
 
 
+def oxygen_demand(key):
+    atoms = STOCKS[key]["atoms"]
+    return atoms.get("C", 0) + atoms["H"] / 4 - atoms.get("O", 0) / 2
+
+
+def spray_vapour(feed, coefficients):
+    """Isochoric finite-feed flash. coefficients are γ Psat V / RT, in moles."""
+    if sum(n / coefficients[k] for k, n in feed.items()) <= 1:
+        return feed.copy()
+    low, high = 0.0, sum(feed.values())
+    for _ in range(34):
+        liquid = (low + high) / 2
+        if sum(n / (liquid + coefficients[k]) for k, n in feed.items()) > 1:
+            low = liquid
+        else:
+            high = liquid
+    liquid = (low + high) / 2
+    return {k: n * coefficients[k] / (liquid + coefficients[k]) for k, n in feed.items()}
+
+
+def spark_charge(x, celsius, factor):
+    """One mol of dry air at spark. Bound vapour by injected inventory and compression heat."""
+    if not 1 <= factor <= START_DOSES[-1]:
+        raise ValueError("Cranking dose outside the declared injector scenario")
+    ambient = celsius + 273.15
+    cr = ENGINES["gdi"].cr
+    ratio = relative_volume(cr, -150) / relative_volume(cr, -10)
+    volume_l = R * ambient / PRESSURE / ratio
+    dry_k = ambient * ratio**0.28
+    stoich = 1 / (4.76 * sum(n * oxygen_demand(k) for k, n in x.items()))
+    feed = {k: n * stoich * factor * (1 - GDI_FILM) for k, n in x.items()}
+    liquid_capacity = sum(n * liquid_cp(k) for k, n in feed.items())
+    cv_air = 2.5 * R
+    interactions = pairs(x)
+
+    def balance(kelvin):
+        # Hold activity coefficients at the injected composition, while solving the
+        # remaining liquid mole fractions and the finite vapour inventory.
+        gamma = activity(x, interactions, kelvin)
+        coefficients = {k: gamma[k] * saturation(k, kelvin) * volume_l / (R * kelvin) for k in x}
+        vapour = spray_vapour(feed, coefficients)
+        vaporisation = sum(n * (STOCKS[k]["latent"] - R * kelvin) for k, n in vapour.items())
+        return (
+            cv_air * (dry_k - kelvin) - liquid_capacity * (kelvin - ambient) - vaporisation,
+            vapour,
+        )
+
+    low, high = ambient, dry_k
+    for _ in range(32):
+        t = (low + high) / 2
+        if balance(t)[0] > 0:
+            low = t
+        else:
+            high = t
+    t = (low + high) / 2
+    residual, vapour = balance(t)
+    gas_mol = 1 + sum(vapour.values())
+    lean = sum(
+        100 * n / (gas_mol * PROPERTIES[k].lfl) for k, n in vapour.items() if PROPERTIES[k].lfl
+    )
+    phi = 4.76 * sum(n * oxygen_demand(k) for k, n in vapour.items())
+    return {
+        "status": (
+            "feasible"
+            if lean >= 1 - 1e-10 and 0.65 - 1e-10 <= phi <= 1.45 + 1e-10
+            else "insufficient"
+        ),
+        "factor": factor,
+        "leanIndex": round(lean, 6),
+        "phi": round(phi, 6),
+        "chargeK": round(t, 4),
+        "chargeKpa": round(gas_mol * R * t / volume_l, 4),
+        "energyResidualJ": round(residual, 8),
+    }
+
+
+def liquid_cp(key):
+    # Bulk distillate and FAME are surrogates with an assumed 2.0 kJ/(kg K).
+    if key in {"b100", "diesel"}:
+        return 2000 * molecular_mass(key)
+    return LIQUID_CP[key]
+
+
+def glow_start(x, celsius, tip_k=GLOW_TIP_K):
+    """Local pilot parcel by a heated plug in the 16.5:1 compression-ignition engine."""
+    # Currently only the two registered bulk CI stocks have cold-flow inputs.
+    if len(x) != 1 or next(iter(x)) not in {"diesel", "b100"}:
+        return {"status": "unsupported", "factor": None}
+    key = next(iter(x))
+    cn = QUALITY[key][1]
+    ambient = celsius + 273.15
+    # Of a 0.25 mg per-hole pilot, this scenario entrains 15% into 1 mg of adjacent air.
+    air_kg = 1e-6
+    fuel_mol = 0.25e-6 * 0.15 / molecular_mass(key)
+    air_mol = air_kg / 0.028965
+    phi = fuel_mol * 4.76 * oxygen_demand(key) / air_mol
+    gas_fraction = fuel_mol / (fuel_mol + air_mol)
+    heat_capacity = air_kg * 1100
+    conductance = 1000 * 40e-6  # h A, W/K, on the plug-facing pilot parcel
+    cp_fuel = fuel_mol * liquid_cp(key)
+    samples = []
+    peak_k = 0.0
+    engine = ENGINES["diesel"]
+    for a in range(-10, 16):
+        compression = relative_volume(engine.cr, -150) / relative_volume(engine.cr, a)
+        bulk_k = ambient * compression**0.28
+        pressure = PRESSURE * compression**1.28
+        exposure_s = (a + 10) / (6 * 200)
+        warm = -math.expm1(-conductance * exposure_s / heat_capacity)
+        dry_k = bulk_k + warm * max(0.0, tip_k - bulk_k)
+        # Debit the entire local pilot's sensible and latent enthalpy before declaring ignition.
+        local_k = (heat_capacity * dry_k + cp_fuel * ambient - fuel_mol * STOCKS[key]["latent"]) / (
+            heat_capacity + cp_fuel
+        )
+        peak_k = max(peak_k, local_k)
+        delay = math.inf
+        if (
+            local_k >= 686.15
+            and phi >= 0.35
+            and gas_fraction * pressure <= saturation(key, local_k)
+        ):
+            delay = ci_delay(local_k, pressure * 1000, cn, 200, engine.stroke)
+        samples.append((a, delay))
+    integral, onset = livengood_wu(samples, 200)
+    return {
+        "status": "feasible" if onset is not None else "insufficient",
+        "factor": round(1 / 0.86, 4) if onset is not None else None,
+        "tipK": tip_k,
+        "peakLocalK": round(peak_k, 4),
+        "phi": round(phi, 6),
+        "delayIntegral": round(integral, 6),
+        "onsetAtdc": None if onset is None else round(onset, 5),
+    }
+
+
+def assisted_start(x, celsius, phase, ci):
+    method = "glow-ci" if ci else "enriched-gdi"
+    if phase & (SPLIT | SOLID):
+        return {"method": method, "status": "phase-blocked", "factor": None}
+    if ci:
+        return {"method": method, **glow_start(x, celsius)}
+    best = None
+    for factor in START_DOSES:
+        trial = spark_charge(x, celsius, factor)
+        if trial["status"] == "feasible":
+            return {"method": method, **trial}
+        if best is None or abs(trial["phi"] - 1) < abs(best["phi"] - 1):
+            best = trial
+    return {"method": method, **best, "testedFactor": best["factor"], "factor": None}
+
+
 def dry_cold_index(parts, *, check_phase):
     """One-temperature dry-carbonate pre-screen for prioritising Stage 1 visits."""
     if parts.keys() != {"eth", "ipa", "dmc"}:
@@ -273,10 +432,13 @@ def screen(parts):
     boundary = split_below(x, interactions)
     ci = any(k in parts for k in ("diesel", "b100"))
     weather = []
+    starts = {}
     for t in TEMPS:
         kelvin = t + 273.15
         gamma = activity(x, interactions, kelvin)
         phase = phase_mask(x, gamma, t, boundary, bool(dose))
+        if t in (-35, -30) or (ci and t <= 0):
+            starts[str(t)] = assisted_start(x, t, phase, ci)
         if phase & (SPLIT | SOLID):
             weather.append([phase, None, None, None])
             continue
@@ -312,6 +474,7 @@ def screen(parts):
     other = sum(m * PROPERTIES[k].other_mj for k, m in mix["kg"].items())
     return {
         "weather": weather,
+        "coldStart": starts,
         "cycle": "Diesel" if ci else "Otto",
         "rvpKpa": rvp,
         "doseVolPct": 100 * dose,
@@ -367,13 +530,17 @@ def gate(s, account, reference_mj, weather_limits=None):
         fails.append("Crystallisation / cloud point")
     if any(f & PHASE_REVIEW for f in flags):
         reviews.append("Phase envelope needs bench data")
-    if s["cycle"] == "Otto":
-        if cold[2] is None:
-            reviews.append("Cranking volatility unavailable in the cold phase state")
-        elif cold[2] < 1:
-            fails.append("Insufficient −35 °C cranking volatility")
-    else:
-        reviews.append("Compression ignition needs cold-soak and filterability tests")
+    assisted = s["coldStart"][str(min(TEMPS))]["status"]
+    if assisted == "unsupported":
+        reviews.append("Cold-start ignition quality outside the modeled domain")
+    elif assisted == "insufficient":
+        if s["cycle"] == "Diesel":
+            fails.append("No timely −35 °C glow-assisted pilot ignition")
+        elif cold[2] is None or cold[2] < 1:
+            fails.append("Insufficient −35 °C vapour at ambient or enriched GDI spark conditions")
+    # A hot plug cannot remedy cold filter plugging. The two bulk CI stocks lack grade-specific CFPP.
+    if s["cycle"] == "Diesel":
+        reviews.append("Cold filterability needs a measured fuel-grade CFPP")
     if hot[1] is None:
         reviews.append("Hot pressure margin unavailable in the selected phase state")
     elif min(RAIL_PRESSURE, PRESSURE - INLET_LOSS) <= hot[1]:

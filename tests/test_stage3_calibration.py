@@ -122,6 +122,14 @@ class CalibrationPhysics(unittest.TestCase):
             air / (mass["afr"] * lam) * 1e6,
         )
 
+    def test_cold_screen_is_replayed_only_on_matching_hardware(self):
+        s = fuel("eth44-ipa56")
+        self.assertEqual(cold_start(s, ENGINES["gdi"])["factor"], s["coldAssisted"]["factor"])
+        self.assertIsNotNone(s["coldAssisted"]["factor"])
+        self.assertIsNone(cold_start(s, ENGINES["mpi"])["factor"])
+        blocked = fuel("diesel100")
+        self.assertIsNone(cold_start(blocked, ENGINES["diesel"])["factor"])
+
     def test_mechanism_specific_outcomes_and_cold_start(self):
         diesel = publisher.projection("diesel100")["architectures"]
         self.assertEqual(diesel["mpi"]["status"], "unsupported")

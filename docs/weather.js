@@ -22,6 +22,22 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
   for (const [id, [name]] of Object.entries(builtin.report.hardware)) car.add(option(id, name));
   car.value = "stock";
 
+  function startingReadings(trial) {
+    if (!trial) return [];
+    const label = trial.method === "glow-ci" ? "Glow-assisted CI" : "Direct-injection cold start";
+    if (trial.status === "phase-blocked") return [[label, "Blocked by liquid phase"]];
+    if (trial.status === "unsupported") return [[label, "Outside ignition model"]];
+    const dose = trial.factor ?? trial.testedFactor;
+    const verdict =
+      trial.status === "feasible" ? "Within ignition window" : "Outside ignition window";
+    const values = [[label, verdict + (dose ? " · " + fmt(dose, 2) + "× warm dose" : "")]];
+    if (trial.chargeK != null)
+      values.push(["Charge at spark", fmt(trial.chargeK, 1) + " K · φ " + fmt(trial.phi, 3)]);
+    if (trial.peakLocalK != null)
+      values.push(["Local pilot parcel", fmt(trial.peakLocalK, 1) + " K · φ " + fmt(trial.phi, 3)]);
+    return values;
+  }
+
   function draw() {
     const t = Number(slider.value);
     set("weather-degrees", (t > 0 ? "+" : "") + t + " °C");
@@ -49,10 +65,8 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
           ? "Unavailable"
           : fmt(r.railKpa - bubble, 1) + " / " + fmt(r.inletKpa - bubble, 1) + " kPa",
       ],
-      [
-        "Cranking index · SI",
-        s.cycle === "Diesel" ? "CI · soak test needed" : num(cold, " × lean limit", 3),
-      ],
+      ...(s.cycle === "Otto" ? [["Ambient SI vapour", num(cold, " × lean limit", 3)]] : []),
+      ...startingReadings(s.coldStart?.[t]),
       ["Dynamic viscosity", num(mu, " mPa·s", 3)],
       ["Wear proxy · 60 °C", fmt(s.wearBeforeUm) + " → " + fmt(s.wearUm) + " µm"],
       ["Bio-ester dose", fmt(s.doseVolPct, 1) + " vol%"],
@@ -184,18 +198,22 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
     const cold = report?.coldScreen;
     set(
       "weather-cold-summary",
-      cold?.evaluatedSI
+      cold?.gdiFeasible != null
         ? "At −35 °C, " +
             cold.aboveLeanLimit +
             " of " +
             cold.evaluatedSI +
-            " liquid spark-ignition candidates reach the lean limit. Highest cranking index " +
-            fmt(cold.bestIndex, 3) +
-            " of 1.000. The dry carbonate grid peaks at " +
-            fmt(report.dryColdBound.upperIndex, 3) +
-            " across " +
-            fmt(report.dryColdBound.gridPoints) +
-            " compositions before phase exclusions."
+            " liquid SI candidates reach the ambient lean limit. The GDI charge model finds " +
+            cold.gdiFeasible +
+            " within the ignition window, including " +
+            cold.gdiNeedsEnrichment +
+            " using extra fuel. Glow-assisted CI clears " +
+            cold.glowFeasible +
+            " of " +
+            cold.ciCandidates +
+            " candidates, with " +
+            cold.ciPhaseBlocked +
+            " blocked by cold flow."
         : "",
     );
     choose();

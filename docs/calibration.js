@@ -238,7 +238,7 @@ globalThis.FuelCalibration = function ({ $, make, set, fmt, lines, option, svg, 
     set(
       "cal-durability",
       "−30 °C enrichment · " +
-        (c.factor === null ? c.status : number(c.factor, 2) + " × warm dose") +
+        (c.factor === null ? c.status : number(c.factor, 2) + " × warm dose · " + c.status) +
         "  /  Model oil-drain ceiling · " +
         number(o.modelDrainKm, 0) +
         " km (" +

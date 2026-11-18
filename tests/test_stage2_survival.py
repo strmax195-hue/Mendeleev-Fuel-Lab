@@ -41,6 +41,10 @@ from engine.stage2_survival import (
     dry_cold_bound,
     dry_cold_index,
     flash_pressure,
+    assisted_start,
+    glow_start,
+    spark_charge,
+    spray_vapour,
     gate,
     inventory,
     lower_heat,
@@ -101,6 +105,64 @@ class SurvivalPhysics(unittest.TestCase):
         )
         self.assertIsNone(screen({"diesel": 100})["weather"][-1][2])
 
+    def test_finite_feed_and_cranking_heat_are_conserved(self):
+        feed = {"eth": 0.055, "water": 0.015}
+        coefficients = {"eth": 0.04, "water": 0.01}
+        vapour = spray_vapour(feed, coefficients)
+        liquid = sum(feed.values()) - sum(vapour.values())
+        self.assertGreater(liquid, 0)
+        for k in feed:
+            self.assertGreater(vapour[k], 0)
+            self.assertLess(vapour[k], feed[k])
+            self.assertAlmostEqual(vapour[k], coefficients[k] * (feed[k] - vapour[k]) / liquid)
+        self.assertEqual(spray_vapour(feed, {k: 1 for k in feed}), feed)
+        for factor in (1, 1.5, 2, 2.5, 3):
+            point = spark_charge({"eth": 0.9, "water": 0.1}, -35, factor)
+            self.assertLess(abs(point["energyResidualJ"]), 1e-5)
+            self.assertGreater(point["chargeK"], 238.15)
+        with self.assertRaises(ValueError):
+            spark_charge({"eth": 1}, -35, 4)
+
+    def test_enriched_start_respects_phase_and_the_vapour_window(self):
+        parts = {"eth": 44, "ipa": 56}
+        mix = inventory(parts, screen(parts)["doseVolPct"] / 100)
+        x = normalized(mix["mol"])
+        self.assertEqual(spark_charge(x, -35, 1)["status"], "insufficient")
+        trial = screen(parts)["coldStart"]["-35"]
+        self.assertEqual((trial["status"], trial["factor"]), ("feasible", 1.5))
+        self.assertGreaterEqual(trial["leanIndex"], 1)
+        self.assertGreaterEqual(trial["phi"], 0.65)
+        wet = screen({"eth": 90, "water": 10})["coldStart"]["-35"]
+        self.assertIsNone(wet["factor"])
+        self.assertLess(wet["phi"], 0.65)
+        # Over-enrichment can produce a mixture outside the upper operating domain.
+        self.assertGreater(spark_charge({"ai95": 1}, 20, 3)["phi"], 1.45)
+        self.assertEqual(spark_charge({"ai95": 1}, 20, 3)["status"], "insufficient")
+        for parts in ({"dmc": 100}, MICROEMULSION, {"b100": 100}, {"diesel": 100}):
+            blocked = screen(parts)["coldStart"]["-35"]
+            self.assertEqual(blocked["status"], "phase-blocked")
+            self.assertIsNone(blocked["factor"])
+
+    def test_glow_assistance_needs_deliverable_fuel_and_local_pilot_ignition(self):
+        x = {"diesel": 1}
+        # Isolate the ignition physics on a liquid supply, then restore the true cold flow.
+        cold = glow_start(x, -35, tip_k=238.15)
+        hot = assisted_start(x, -35, 0, ci=True)
+        self.assertEqual(cold["status"], "insufficient")
+        self.assertIsNone(cold["onsetAtdc"])
+        self.assertEqual(hot["status"], "feasible")
+        self.assertGreaterEqual(hot["peakLocalK"], 686.15)
+        self.assertGreaterEqual(hot["phi"], 0.35)
+        self.assertGreaterEqual(hot["delayIntegral"], 1)
+        self.assertLessEqual(hot["onsetAtdc"], 15)
+        self.assertEqual(assisted_start(x, -35, SOLID, ci=True)["status"], "phase-blocked")
+        self.assertEqual(glow_start({"eth": 1}, -35)["status"], "unsupported")
+        # The same admitted road diesel can actually reach the pilot at a less severe soak.
+        road = screen({"diesel": 100})["coldStart"]
+        self.assertEqual(road["-25"]["status"], "phase-blocked")
+        self.assertEqual(road["-20"]["status"], "feasible")
+        self.assertLessEqual(road["-20"]["onsetAtdc"], 15)
+
     def test_materials_retrofit_and_temperature_rules(self):
         self.assertEqual(len(MATERIALS), 9)
         diesel = chemical_ratings({"diesel": 1})
@@ -139,7 +201,9 @@ class SurvivalPhysics(unittest.TestCase):
         s = screen({"eth": 34, "ipa": 44, "dmc": 22})
         real = gate(s, {"eroi": 2, "investedMj100": 1}, 2)
         self.assertEqual(real["installation"]["verdict"], STAINLESS_SWAP)
-        self.assertIn("Insufficient −35 °C cranking volatility", real["failures"])
+        self.assertLess(s["weather"][0][2], 1)
+        self.assertEqual(s["coldStart"]["-35"]["status"], "feasible")
+        self.assertEqual(real["failures"], ["Wear proxy exceeds pump screen"])
         self.assertEqual(real["status"], "rejected")
         s.update(weather=[[0, 20, 1.1, 2] for _ in TEMPS], wearUm=500, supplyReview=False)
         self.assertEqual(gate(s, {"eroi": 2, "investedMj100": 1}, 2)["status"], "passed")
@@ -278,6 +342,15 @@ class PublicationAndWorker(unittest.TestCase):
         self.assertEqual(set(rows), {r["id"] for r in state["baselines"] + state["results"]})
         self.assertTrue(set(state["frontier"]) <= set(report["nominated"]))
         self.assertEqual(sum(report["funnel"].values()), len(report["nominated"]))
+        start_cases = [rows[r["id"]]["screen"]["coldStart"]["-35"] for r in state["results"]]
+        self.assertEqual(
+            report["coldScreen"]["gdiFeasible"],
+            sum(t["method"] == "enriched-gdi" and t["status"] == "feasible" for t in start_cases),
+        )
+        self.assertGreater(
+            report["coldScreen"]["gdiFeasible"], report["coldScreen"]["aboveLeanLimit"]
+        )
+        self.assertEqual(report["coldScreen"]["ciPhaseBlocked"], 1)
         self.assertNotIn("ai95100", report["nominated"])
         extra = next(r for r in rows if r not in report["nominated"] and r in catalogue())
         report["nominated"].append(extra)

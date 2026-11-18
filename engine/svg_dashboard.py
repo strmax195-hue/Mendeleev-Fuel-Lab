@@ -95,8 +95,8 @@ def fuel_map(state, stage2=None, stage3=None, stage4=None):
                     26,
                     562,
                     (
-                        f'−35 °C  ·  {cold["aboveLeanLimit"]}/{cold["evaluatedSI"]} liquid SI above lean limit  ·  best {cold["bestIndex"]:.3f} / 1.000'
-                        if cold and cold["evaluatedSI"]
+                        f'−35 °C  ·  Ambient SI {cold["aboveLeanLimit"]}/{cold["evaluatedSI"]}  ·  GDI charge {cold["gdiFeasible"]}/{cold["evaluatedSI"]}  ·  Glow CI {cold["glowFeasible"]}/{cold["ciCandidates"]} ready'
+                        if cold and "gdiFeasible" in cold
                         else f'−35 to +50 °C  ·  {count} shortlisted  ·  {stage2["funnel"]["review"]} in review'
                     ),
                     13,

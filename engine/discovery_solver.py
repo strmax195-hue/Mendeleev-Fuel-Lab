@@ -78,15 +78,14 @@ def dry_visit_order():
 @lru_cache(maxsize=1)
 def fingerprint():
     h = hashlib.sha256(model_script().encode())
-    for path in (
-        "docs/thermo.js",
-        "engine/discovery_solver.py",
-        "engine/stage2_survival.py",
-        "engine/stage2_inputs.py",
-    ):
+    for path in ("docs/thermo.js", "engine/discovery_solver.py"):
         h.update((ROOT / path).read_bytes())
     h.update("\n".join(catalogue()).encode())
-    return h.hexdigest()[:16]
+    # Only the resulting winter visit order affects Stage 1. Hardware gates belong to Stage 2.
+    h.update("\n".join(dry_visit_order()).encode())
+    signature = h.hexdigest()
+    aliases = json.loads((ROOT / "engine/data/stage1-identities.json").read_text(encoding="ascii"))
+    return aliases.get(signature, signature[:16])
 
 
 def dominates(a, b):
