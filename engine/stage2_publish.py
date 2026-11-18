@@ -14,10 +14,12 @@ from .stage2_survival import (
     ROOT,
     TEMPS,
     WEATHER_COLUMNS,
+    ROAD_COLUMNS,
+    ROAD_REFERENCE_C,
     canonical,
     gate,
     model_hash,
-    road_account,
+    road_profile,
     screen,
 )
 
@@ -67,7 +69,9 @@ def build(state, previous=None, load_row=None, supplied=None):
         (set(retained) & known) | set(state["frontier"]) | {e["id"] for e in state["records"]}
     )
     reference = next(r for r in state["baselines"] if r["id"] == "ai95100")
-    limit = road_account(screen(reference["parts"]), reference)["wtwUsd100"]
+    base = road_profile(screen(reference["parts"]), reference)
+    limit = base["wtwUsd100"]
+    weather_limits = [w[0] for w in base["weather"]]
     rows, hashes = {}, {}
     for row in state["baselines"] + state["results"]:
         key = row["id"]
@@ -77,13 +81,13 @@ def build(state, previous=None, load_row=None, supplied=None):
         phys = cached["screen"] if cached else (supplied or {}).get(key)
         if phys is None:
             phys = screen(row["parts"])
-        account = road_account(phys, row)
+        account = road_profile(phys, row)
         record = {
             "id": key,
             "model": model_hash(),
             "screen": phys,
             "road": account,
-            "gate": gate(phys, account, limit),
+            "gate": gate(phys, account, limit, weather_limits),
         }
         rows[key] = record
         hashes[key] = sha(canonical(record) + "\n")
@@ -103,6 +107,8 @@ def build(state, previous=None, load_row=None, supplied=None):
         "minC": min(TEMPS),
         "maxC": max(TEMPS),
         "columns": WEATHER_COLUMNS,
+        "roadColumns": ROAD_COLUMNS,
+        "roadReferenceC": ROAD_REFERENCE_C,
         "materials": MATERIALS,
         "hardware": HARDWARE,
         "railKpa": RAIL_PRESSURE,
@@ -142,9 +148,10 @@ def certificate(record, stage1_model):
             f"| Ambient dynamic viscosity at +20 °C | {reading(s['weather'][55][3], 3)} mPa·s |",
             f"| Estimated wear before / after | {s['wearBeforeUm']:.0f} / {s['wearUm']:.0f} µm |",
             f"| Added bio-ester | {s['doseVolPct']:.1f}% of final liquid volume |",
-            f"| Wheel energy / invested primary energy | {a['wheelMj100']:.2f} / {a['investedMj100']:.2f} MJ per 100 km |",
-            f"| Wheel EROI / delivered fuel cost | {a['eroi']:.3f} / ${a['wtwUsd100']:.2f} per 100 km |",
-            f"| Synthesis electricity (included in fuel cost) | {a['synthesisKwh100']:.2f} kWh, ${a['electricityUsd100']:.2f} per 100 km |",
+            f"| Wheel energy / invested primary energy at +15 °C | {a['wheelMj100']:.2f} / {a['investedMj100']:.2f} MJ per 100 km |",
+            f"| Wheel EROI / delivered fuel cost at +15 °C | {a['eroi']:.3f} / ${a['wtwUsd100']:.2f} per 100 km |",
+            f"| Delivered cost at −35 / +50 °C, engine running | ${a['weather'][0][0]:.2f} / ${a['weather'][-1][0]:.2f} per 100 km |",
+            f"| Synthesis electricity at +15 °C (included in fuel cost) | {a['synthesisKwh100']:.2f} kWh, ${a['electricityUsd100']:.2f} per 100 km |",
             "",
             "**Failed gates** · " + (", ".join(g["failures"]) or "None") + ".",
             "",

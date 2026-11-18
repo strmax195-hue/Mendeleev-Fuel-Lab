@@ -48,6 +48,7 @@ from engine.stage2_survival import (
     pairs,
     parent_volumes,
     road_account,
+    road_profile,
     saturation,
     screen,
     split_below,
@@ -162,6 +163,28 @@ class SurvivalPhysics(unittest.TestCase):
             reactants_h = sum(STOCKS[k]["hf"] * n for k, n in mix["mol"].items())
             self.assertAlmostEqual(sum(mix["mj"].values()), (reactants_h - products_h) / 1e6)
         self.assertLess(lower_heat("water"), 0)
+
+    def test_weather_changes_drag_wheel_work_and_delivered_cost(self):
+        row = seed()["baselines"][0]
+        physical = screen(row["parts"])
+        ledger = road_profile(physical, row)
+        cold, warm = road_account(physical, row, -35), road_account(physical, row, 50)
+        self.assertGreater(cold["wtwUsd100"], warm["wtwUsd100"])
+        self.assertGreater(cold["litres100"], warm["litres100"])
+        self.assertEqual(ledger["weather"][50][0], ledger["wtwUsd100"])
+        predicted_delta = row["dragN"] * 288.15 * (1 / 238.15 - 1 / 323.15) / 10
+        self.assertAlmostEqual(cold["wheelMj100"] - warm["wheelMj100"], predicted_delta, places=4)
+        self.assertAlmostEqual(
+            (cold["fuelMj100"] - warm["fuelMj100"]) * row["eta"], predicted_delta, places=4
+        )
+        limits = [w[0] + 0.01 for w in ledger["weather"]]
+        self.assertNotIn(
+            "Delivered cost exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
+        )
+        limits[0] -= 0.02
+        self.assertIn(
+            "Delivered cost exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
+        )
 
     def test_road_work_upstream_energy_and_cost_ledgers(self):
         state = seed()

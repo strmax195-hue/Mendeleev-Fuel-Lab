@@ -37,6 +37,8 @@ R = 8.314462618
 TREF = 298.15
 TEMPS = range(-35, 51)
 SPLIT, SOLID, PHASE_REVIEW = 1, 2, 4
+ROAD_REFERENCE_C = 15
+ROAD_COLUMNS = ("wtwUsd100", "electricityUsd100", "eroi", "litres100")
 WEATHER_COLUMNS = ("phaseMask", "bubbleKpa", "coldIndex", "viscosityMpas")
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -300,14 +302,17 @@ def screen(parts):
     }
 
 
-def road_account(s, row):
-    """100 km, same useful road duty and tank MJ demand as the Stage 1 vehicle."""
-    tank_mj = row["mjKm"] * 100
+def road_account(s, row, celsius=ROAD_REFERENCE_C):
+    """Steady 100 km, fixed pressure and warmed powertrain, with ambient-density drag."""
+    density_ratio = (273.15 + ROAD_REFERENCE_C) / (273.15 + celsius)
+    drag = row["dragN"] * density_ratio
+    wheel_delta = (drag - row["dragN"]) / 10  # MJ at the wheels over 100 km
+    tank_mj = row["mjKm"] * 100 + wheel_delta / row["eta"]
     litres = tank_mj / s["mjL"]
     mass = s["kgL"] * litres
     electricity = litres * s["kwhL"]
     external = litres * s["upstreamMjL"] + electricity * 3.6 * GRID_PRIMARY + mass * DELIVERY_MJ
-    wheel = (row["dragN"] + row["rollN"]) / 10
+    wheel = (drag + row["rollN"]) / 10
     return {
         "litres100": round(litres, 5),
         "fuelMj100": round(tank_mj, 5),
@@ -320,7 +325,13 @@ def road_account(s, row):
     }
 
 
-def gate(s, account, reference_cost):
+def road_profile(s, row):
+    ledgers = [road_account(s, row, t) for t in TEMPS]
+    reference = ledgers[ROAD_REFERENCE_C - min(TEMPS)]
+    return {**reference, "weather": [[a[k] for k in ROAD_COLUMNS] for a in ledgers]}
+
+
+def gate(s, account, reference_cost, weather_limits=None):
     """A fail blocks advancement; assumptions requiring measurement remain visible."""
     fails, reviews = [], []
     flags = [w[0] for w in s["weather"]]
@@ -355,9 +366,16 @@ def gate(s, account, reference_cost):
         fails.append("Wear proxy exceeds pump screen")
     if s["doseVolPct"]:
         reviews.append("Ester wear response in alcohol needs measurement")
-    if account["eroi"] < MIN_EROI:
+    weather = account.get("weather", [])
+    lowest_eroi = min((w[2] for w in weather), default=account["eroi"])
+    if lowest_eroi < MIN_EROI:
         fails.append("Wheel EROI below 1")
-    if account["wtwUsd100"] > reference_cost:
+    over_budget = account["wtwUsd100"] > reference_cost
+    if weather_limits is not None:
+        if len(weather) != len(TEMPS) or len(weather_limits) != len(TEMPS):
+            raise ValueError("Economic gate requires matching temperature grids")
+        over_budget = any(w[0] > limit for w, limit in zip(weather, weather_limits))
+    if over_budget:
         fails.append("Delivered cost exceeds AI-95")
     if s["supplyReview"] or s["doseVolPct"]:
         reviews.append("Pathway / ester supply needs capacity evidence")

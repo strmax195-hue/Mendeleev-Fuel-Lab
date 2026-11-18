@@ -28,6 +28,7 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
     if (!current) return;
     const { screen: s, road, gate } = current;
     const [mask, bubble, cold, mu] = s.weather[t - builtin.report.minC];
+    const [cost, electricity, eroi, litres] = road.weather[t - builtin.report.minC];
     const r = report || builtin.report;
     const selected = s.assemblies[car.value].filter(([start]) => start <= t).at(-1)[1];
     set("weather-phase", phase(mask));
@@ -55,9 +56,10 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
       ["Dynamic viscosity", num(mu, " mPa·s", 3)],
       ["Wear proxy · 60 °C", fmt(s.wearBeforeUm) + " → " + fmt(s.wearUm) + " µm"],
       ["Bio-ester dose", fmt(s.doseVolPct, 1) + " vol%"],
-      ["Wheel EROI", fmt(road.eroi, 3) + " ×"],
-      ["Delivered fuel / 100 km", "$" + fmt(road.wtwUsd100, 2)],
-      ["Of which synthesis electricity", "$" + fmt(road.electricityUsd100, 2) + " / 100 km"],
+      ["Fuel consumed / 100 km", fmt(litres, 2) + " L"],
+      ["Wheel EROI", fmt(eroi, 3) + " ×"],
+      ["Delivered fuel / 100 km", "$" + fmt(cost, 2)],
+      ["Of which synthesis electricity", "$" + fmt(electricity, 2) + " / 100 km"],
     ]);
     $("weather-materials").replaceChildren(
       ...Object.entries(r.materials).map(([id, [name, low]]) => {
