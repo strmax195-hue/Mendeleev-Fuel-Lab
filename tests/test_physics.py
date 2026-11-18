@@ -108,7 +108,7 @@ class Thermodynamics(unittest.TestCase):
             self.assertAlmostEqual(row["dragN"], 0.5 * 1.225 * 0.62 * (110 / 3.6) ** 2)
             self.assertAlmostEqual(row["rollN"], 1500 * 9.80665 * 0.010)
             self.assertAlmostEqual(row["range"] * row["mjKm"], 50 * row["mjL"])
-            self.assertAlmostEqual(row["cost"], 100 * row["kgKm"] * row["usdKg"])
+            self.assertAlmostEqual(row["synthesisMj100"], 100 * row["kgKm"] * row["synthesisMjKg"])
             self.assertAlmostEqual(row["climate"], row["ci"] * row["mjKm"])
 
     def test_policy_and_phase_bounds(self):

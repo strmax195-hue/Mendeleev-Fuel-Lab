@@ -20,3 +20,5 @@ jobs:
           python -m unittest discover -s tests -p test_stage2_survival.py -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m unittest discover -s tests -p test_stage3_calibration.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s tests -p test_stage4_planetary.py -v

@@ -1,4 +1,4 @@
-"""Compute or independently replay a portable Stage 2 / Stage 3 sector with Python 3.10+."""
+"""Compute or independently replay a portable Stage 2–4 sector with Python 3.10+."""
 
 import argparse
 import hashlib
@@ -70,25 +70,33 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--start", type=int, help="Zero-based index in sorted catalogue order")
-    mode.add_argument("--candidate", help="Stage 3 catalogue ID or ai95100 / diesel100 control")
+    mode.add_argument(
+        "--candidate", help="Stage 3 or 4 catalogue ID or ai95100 / diesel100 control"
+    )
     mode.add_argument("--verify", type=Path, metavar="BUNDLE")
-    parser.add_argument("--stage", type=int, choices=(2, 3), default=None)
+    parser.add_argument("--stage", type=int, choices=(2, 3, 4), default=None)
+    parser.add_argument(
+        "--architecture", choices=("mpi", "gdi", "diesel"), help="Engine for a Stage 4 replay"
+    )
     parser.add_argument("--count", type=int)
     parser.add_argument("--output", type=Path, help="Default: sector-START-COUNT.json")
     args = parser.parse_args()
     try:
         if args.verify:
             value = read_bundle(args.verify)
-            stage = (
-                3
-                if isinstance(value, dict)
-                and isinstance(value.get("payload"), dict)
-                and value["payload"].get("schema") == 3
-                else 2
+            schema = (
+                value.get("payload", {}).get("schema")
+                if isinstance(value, dict) and isinstance(value.get("payload"), dict)
+                else None
             )
+            stage = schema if schema in (3, 4) else 2
             if args.stage is not None and args.stage != stage:
                 raise ValueError("Requested stage disagrees with the bundle")
-            if stage == 3:
+            if stage == 4:
+                from engine.stage4_planetary import verify as replay, submission
+
+                print(submission(replay(value)))
+            elif stage == 3:
                 from cli.calibration_worker import verify as verify_stage3
 
                 verify_stage3(value)
@@ -96,7 +104,16 @@ def main():
                 verify(value)
             print("SHA-256 and independent numerical replay verified.")
             return
-        if args.stage == 3:
+        if args.architecture and args.stage != 4:
+            raise ValueError("--architecture requires --stage 4")
+        if args.stage == 4:
+            from engine.stage4_planetary import compute as compute_stage4
+
+            if not args.candidate or not args.architecture or args.count is not None:
+                raise ValueError("Stage 4 requires one --candidate and one --architecture")
+            bundle = compute_stage4(args.candidate, args.architecture)
+            output = args.output or Path(f"planetary-{args.candidate}-{args.architecture}.json")
+        elif args.stage == 3:
             from cli.calibration_worker import compute as compute_stage3
 
             count = 1 if args.count is None else args.count
@@ -105,7 +122,7 @@ def main():
             output = args.output or Path(f"calibration-{label}.json")
         else:
             if args.candidate:
-                raise ValueError("--candidate requires --stage 3")
+                raise ValueError("--candidate requires --stage 3 or 4")
             count = 10 if args.count is None else args.count
             bundle = compute(args.start, count)
             output = args.output or Path(f"sector-{args.start:04d}-{count:02d}.json")

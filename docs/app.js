@@ -112,13 +112,13 @@
   const numericKeys = [
     "range",
     "index",
-    "cost",
+    "netEnergyReturn",
     "carbon",
     "climate",
     "mjKg",
     "mjL",
     "ci",
-    "usdKg",
+    "synthesisMjKg",
     "flameK",
     "infra",
     "rho",
@@ -182,9 +182,14 @@
     const r = byId.get(id);
     set("pick-name", r.name);
     lines($("pick-metrics"), [
-      ["Eco-Affordability", fmt(r.index, 1) + " / 100"],
+      ["Physical performance", fmt(r.index, 1) + " / 100"],
       ["50 L range", fmt(r.range) + " km"],
-      ["Production cost", "$" + fmt(r.cost, 2) + " / 100 km"],
+      ["Net energy return", fmt(r.netEnergyReturn, 2) + " MJ/MJ"],
+      [
+        "Solar to tank",
+        r.solarToTankPct === null ? "Pathway unresolved" : fmt(r.solarToTankPct, 3) + "%",
+      ],
+      ["Synthesis energy", fmt(r.synthesisMj100, 1) + " MJ/100 km"],
       ["Lifecycle", fmt(r.climate, 1) + " g CO₂e/km"],
       ["Tailpipe carbon balance", fmt(r.carbon, 1) + " g CO₂/km"],
       ["Preferred cycle", r.preferred],
@@ -198,7 +203,7 @@
       ? state.results.filter((r) => front.has(r.id))
       : state.results;
     const rows = [...visible, ...state.baselines],
-      xMax = Math.max(...rows.map((r) => r.cost)) * 1.12,
+      xMax = Math.max(...rows.map((r) => r.netEnergyReturn)) * 1.12,
       yMax = Math.max(...rows.map((r) => r.range)) * 1.12;
     const x = (n) => 57 + (n / xMax) * 533,
       y = (n) => 248 - (n / yMax) * 222;
@@ -233,14 +238,14 @@
       label(49, b + 3, fmt((yMax * i) / 4), "end");
     }
     label(58, 15, "50 L range · km", "start");
-    label(320, 289, "Production cost · USD per 100 km");
+    label(320, 289, "Tank energy / synthesis input · MJ/MJ");
     const maxCI = Math.max(
       ...state.baselines.map((r) => r.climate),
       ...state.results.map((r) => r.climate),
     );
     rows.sort((a, b) => Number(a.id === selected) - Number(b.id === selected));
     for (const r of rows) {
-      const px = x(r.cost),
+      const px = x(r.netEnergyReturn),
         py = y(r.range),
         ref = state.baselines.includes(r);
       const color = "hsl(" + Math.round(150 - 140 * Math.min(1, r.climate / maxCI)) + " 42% 43%)";
@@ -263,9 +268,9 @@
         r.name +
         " · " +
         fmt(r.range) +
-        " km · $" +
-        fmt(r.cost, 2) +
-        "/100 km · " +
+        " km · " +
+        fmt(r.netEnergyReturn, 2) +
+        " MJ/MJ · " +
         fmt(r.climate, 1) +
         " g CO₂e/km";
       point.append(svg("title", {}, title));
@@ -287,7 +292,7 @@
   }
   function leaderboard() {
     const sort = $("rank").value,
-      sign = ["climate", "cost"].includes(sort) ? 1 : -1;
+      sign = sort === "climate" ? 1 : -1;
     const sorted = [...state.results].sort(
       (a, b) => sign * (a[sort] - b[sort]) || a.id.localeCompare(b.id),
     );
@@ -300,8 +305,8 @@
         td.append(btn);
         tr.append(
           td,
-          ...[fmt(r.index, 1), fmt(r.range), "$" + fmt(r.cost, 2), fmt(r.climate, 1)].map((s) =>
-            make("td", "", s),
+          ...[fmt(r.index, 1), fmt(r.range), fmt(r.netEnergyReturn, 2), fmt(r.climate, 1)].map(
+            (s) => make("td", "", s),
           ),
         );
         return tr;
@@ -350,7 +355,13 @@
           "Periodic-table reference. This element has no admitted liquid fuel component in the survey.",
       ),
     );
-    if (e.ppm !== null) card.append(make("p", "", "Crustal abundance · " + fmt(e.ppm) + " ppm"));
+    for (const [label, ppm] of [
+      ["Continental crust", e.ppm],
+      ["Dry atmosphere", e.airPpm],
+      ["Seawater", e.oceanPpm],
+    ]) {
+      if (ppm != null) card.append(make("p", "", label + " · " + fmt(ppm, 1) + " ppm by mass"));
+    }
     const matches = state.results.filter((r) => symbol === "N" || r.atoms[symbol] > 0);
     card.append(
       make("hr"),
@@ -463,6 +474,7 @@
     );
     set("phase", benchRow.phase + " · 25 °C");
     pv($("bench-pv"), c.pv);
+    globalThis.FuelCylinder.bench(benchRow, cy);
     set(
       "bench-extra",
       "Charge cooling " +
@@ -529,7 +541,7 @@
         track.append(fill);
         const dl = make("dl", "mini-dl");
         lines(dl, [
-          ["Production / 100 km", "$" + fmt(d.cost, 2)],
+          ["Synthesis / 100 km", fmt(d.synthesisMj100, 1) + " MJ"],
           ["Lifecycle CO₂e", fmt(d.climate, 1) + " g/km"],
           ["Tailpipe CO₂ balance", fmt(d.carbon, 1) + " g/km"],
           ["Thermal stress index", fmt(c.heatScore, 1) + " / 100"],
@@ -560,6 +572,8 @@
     svg,
     feedRoot,
   });
+  const attachPlanetary = globalThis.FuelPlanetary({ $, make, set, fmt, lines, option, feedRoot });
+  let planetaryIndex = globalThis.FUEL_PLANETARY.report;
   let weatherIndex = globalThis.FUEL_WEATHER.report;
   let calibrationIndex = globalThis.FUEL_CALIBRATION.report;
   function render() {
@@ -572,7 +586,7 @@
     set("index-label", lead.name);
     set("stat-range", fmt(Math.max(...state.results.map((r) => r.range))) + " km");
     set("stat-front", fmt(state.frontier.length));
-    set("front-label", "Range, cost & climate");
+    set("front-label", "Range, energy & climate");
     inspectElement(activeElement);
     selectResult(byId.has(selected) ? selected : lead.id);
     leaderboard();
@@ -580,6 +594,8 @@
     race();
     attachWeather(state, weatherIndex);
     attachCalibration(state, weatherIndex, calibrationIndex);
+    attachPlanetary(state, calibrationIndex, planetaryIndex);
+    globalThis.FuelCylinder.catalogue(state);
   }
   const media = matchMedia("(prefers-color-scheme: dark)");
   document.documentElement.dataset.theme = media.matches ? "dark" : "light";
@@ -619,15 +635,17 @@
       return r.json();
     }
     try {
-      const [incoming, index, third] = await Promise.all([
+      const [incoming, index, third, fourth] = await Promise.all([
         read("state.json"),
         read("stage2.json").catch(() => null),
         read("stage3.json").catch(() => null),
+        read("stage4.json").catch(() => null),
       ]);
       if (!valid(incoming) || incoming.tested < state.tested)
         throw Error("Incompatible checkpoint");
       if (index || incoming.generation !== state.generation) weatherIndex = index;
       if (third || incoming.generation !== state.generation) calibrationIndex = third;
+      if (fourth || incoming.generation !== state.generation) planetaryIndex = fourth;
       state = incoming;
       render();
       set(

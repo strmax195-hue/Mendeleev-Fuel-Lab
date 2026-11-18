@@ -26,7 +26,7 @@ def frame(title, desc, body, w, h):
     )
 
 
-def fuel_map(state, stage2=None, stage3=None):
+def fuel_map(state, stage2=None, stage3=None, stage4=None):
     pct = 100 * state["tested"] / state["total"]
     b = [
         txt(26, 33, "MENDELEEV  /  FUEL LAB", 16, "mono bold"),
@@ -66,7 +66,7 @@ def fuel_map(state, stage2=None, stage3=None):
             txt(
                 26,
                 423,
-                f'Index leader   {r["name"]}   ·   {r["range"]:.0f} km   ·   ${r["cost"]:.2f}/100 km   ·   {r["climate"]:.0f} g CO₂e/km',
+                f'Index leader   {r["name"]}   ·   {r["range"]:.0f} km   ·   {r["netEnergyReturn"]:.2f}× energy return   ·   {r["climate"]:.0f} g CO₂e/km',
                 14,
             )
         )
@@ -75,7 +75,7 @@ def fuel_map(state, stage2=None, stage3=None):
         passed = stage2["funnel"]["passed"]
         b.extend(
             [
-                txt(26, 465, "Stage 1 · Thermodynamic Pareto discovery", 17, "bold"),
+                txt(26, 465, "Stage 1 · Thermodynamic synergy", 17, "bold"),
                 txt(
                     764,
                     465,
@@ -117,10 +117,31 @@ def fuel_map(state, stage2=None, stage3=None):
                 ),
             ]
         )
+    if stage4 is not None:
+        count, passed = len(stage4["finalists"]), len(stage4["verified"])
+        b.extend(
+            [
+                txt(26, 687, "Stage 4 · Planetary abundance and biosphere", 17, "bold"),
+                txt(764, 687, f"{passed} / {count} verified", 14, "mono", 'text-anchor="end"'),
+                rect(26, 700, 738, 7, "soft", 3),
+                rect(26, 700, 738 * passed / max(1, count), 7, "accent", 3),
+                txt(
+                    26,
+                    733,
+                    f"1 billion vehicles  ·  Annual resource flows  ·  {len(stage4['peerReproduced'])} peer-reproduced runs",
+                    13,
+                    "mono",
+                ),
+            ]
+        )
     return frame(
         "Periodic Table Fuel Map",
         "Thermodynamic catalogue coverage and shortlisted engineering survival screens.",
         b,
         790,
-        669 if stage3 is not None else 582 if stage2 is not None else 442,
+        (
+            753
+            if stage4 is not None
+            else 669 if stage3 is not None else 582 if stage2 is not None else 442
+        ),
     )

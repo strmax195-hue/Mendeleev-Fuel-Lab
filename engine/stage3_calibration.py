@@ -6,23 +6,13 @@ import math
 
 from .discovery_solver import catalogue, identity
 from .elements_db import CEA, REFERENCES, STOCKS
+from .fuel_quality import QUALITY
 from .stage2_survival import inventory, normalized, screen
 
 RPMS = (1000, 1500, 2000, 3000, 4000)
 LOADS = (0.2, 0.4, 0.6, 0.8, 1.0)
 AIR_R = 287.05
 ATM = 101325.0
-# RON, cetane, stoichiometric laminar speed at 298 K and 1 atm (m/s).
-# Screening priors, with unknown chemistry left unparameterised. See STAGE3.md.
-QUALITY = {
-    "ai95": (95, None, 0.35),
-    "diesel": (None, 51, None),
-    "eth": (109, 8, 0.40),
-    "ipa": (112, 12, 0.35),
-    "dmc": (101, None, 0.29),
-    "oct": (None, 38, None),
-    "b100": (None, 52, None),
-}
 
 
 @dataclass(frozen=True)

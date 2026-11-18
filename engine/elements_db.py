@@ -1,7 +1,17 @@
-"""Whitelisted liquid feedstocks, phase groups, economic scenarios and map data."""
+"""Whitelisted liquid feedstocks, phase groups, energy pathways and map data."""
 
 import json
 from pathlib import Path
+
+from .fuel_quality import QUALITY
+from .stage2_inputs import PROPERTIES, GRID_PRIMARY
+from .reservoirs import (
+    AIR_PPM,
+    OCEAN_PPM,
+    CROP_LIGHT_EFFICIENCY,
+    ETHANOL_RECOVERY,
+    SOLAR_PROCESS_EFFICIENCY,
+)
 
 DATA = Path(__file__).with_name("data")
 CEA = json.loads((DATA / "cea.json").read_text())
@@ -46,13 +56,23 @@ ROLES = {
     "Zn": "Corrosion protection on vehicle bodywork.",
 }
 ELEMENTS = [
-    dict(z=z, symbol=s, name=n, row=r, col=c, ppm=PPM.get(s), role=ROLES.get(s))
+    dict(
+        z=z,
+        symbol=s,
+        name=n,
+        row=r,
+        col=c,
+        ppm=PPM.get(s),
+        airPpm=AIR_PPM.get(s),
+        oceanPpm=OCEAN_PPM.get(s),
+        role=ROLES.get(s),
+    )
     for z, s, n, r, c in json.loads((DATA / "periodic.json").read_text())
 ]
 
 
-# density kg/L, melting/normal boiling K, latent heat J/mol and costs in USD/kg.
-# See SOURCES.md for phase, pathway, cost and surrogate choices.
+# density kg/L, melting/normal boiling K, latent heat J/mol on the liquid reference basis.
+# See SOURCES.md for phase, pathway and surrogate choices.
 def fluid(
     label,
     short,
@@ -61,7 +81,6 @@ def fluid(
     melt,
     boil,
     latent,
-    price,
     ci,
     infrastructure,
     cycle="Otto",
@@ -79,7 +98,6 @@ def fluid(
         melt=melt,
         boil=boil,
         latent=latent,
-        price=price,
         ci=ci,
         gateKg=gate_kg,
         infra=infrastructure,
@@ -101,7 +119,6 @@ STOCKS = {
         159,
         351.5,
         vapor_gap("C2H5OH", "C2H5OH(L)"),
-        18.5 * 1.10 * 26.8 / 1000,
         42.5,
         0.65,
     ),
@@ -113,7 +130,6 @@ STOCKS = {
         185,
         355.4,
         45400,
-        0.57,
         None,
         0.45,
         hf=CEA["C3H8O,2propanol"]["hf_j_mol"] - 45400,
@@ -127,7 +143,6 @@ STOCKS = {
         273.15,
         373.15,
         vapor_gap("H2O", "H2O(L)"),
-        0.001,
         None,
         0.30,
         gate_kg=0.0003,
@@ -140,7 +155,6 @@ STOCKS = {
         277.2,
         363.4,
         38020,
-        0.845,
         None,
         0.40,
         hf=-609600,
@@ -155,7 +169,6 @@ STOCKS = {
         257,
         468.3,
         71100,
-        7.0,
         None,
         0.40,
         hf=-426600,
@@ -170,7 +183,6 @@ STOCKS = {
         288.15,
         620,
         95000,
-        18.5 * 1.10 * 37.3 / 1000,
         11.2,
         0.75,
         "Diesel",
@@ -183,7 +195,6 @@ STOCKS = {
         165.8,
         372.4,
         vapor_gap("C8H18,isooctane", "C8H18(L),isooct"),
-        12 * 1.10 * 44.3 / 1000,
         100.6,
         1,
     ),
@@ -195,12 +206,17 @@ STOCKS = {
         250,
         490,
         vapor_gap("Jet-A(g)", "Jet-A(L)"),
-        11 * 1.10 * 43 / 1000,
         105.76,
         1,
         "Diesel",
     ),
 }
+for key, stock in STOCKS.items():
+    route = PROPERTIES[key]
+    stock["synthesisMjKg"] = route.other_mj + 3.6 * GRID_PRIMARY * route.kwh
+    # Solar origin is attributable only for the declared crop route and treatment water.
+    stock["solarRoute"] = {"eth": "crop", "water": "treatment"}.get(key)
+
 REFERENCES = ("ai95", "diesel")
 FAMILIES = [("eth", "ipa", "water"), ("eth", "dmc"), ("b100",), ("oct",)]
 # Neutral reverse-aggregate point in ACS Central Science, DOI 10.1021/acscentsci.6b00116.
@@ -211,10 +227,14 @@ VEHICLES = {
     "Heavy Truck": [18000, 5.8, 0.0065],
 }
 MODEL = dict(
-    version="1.0.0",
+    version="2.0.0",
+    solar=dict(
+        crop=CROP_LIGHT_EFFICIENCY, recovery=ETHANOL_RECOVERY, process=SOLAR_PROCESS_EFFICIENCY
+    ),
     cea=CEA,
     nasa=NASA7,
     stocks=STOCKS,
+    laminarMps={k: v[2] for k, v in QUALITY.items()},
     elements=ELEMENTS,
     families=FAMILIES,
     microemulsion=MICROEMULSION,

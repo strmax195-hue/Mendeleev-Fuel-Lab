@@ -67,7 +67,7 @@ def frontier(rows, vector):
 
 
 def objectives(r):
-    return (round(r["range"], 3), -round(r["cost"], 6), -round(r["climate"], 4))
+    return (round(r["range"], 3), round(r["netEnergyReturn"], 6), -round(r["climate"], 4))
 
 
 def record_vector(r):
@@ -128,7 +128,7 @@ def select_batch(rows, batch, generation):
 
 def new_state():
     return dict(
-        schema=1,
+        schema=2,
         model=fingerprint(),
         generation=0,
         total=TOTAL,
@@ -142,7 +142,7 @@ def new_state():
 
 
 def check_state(state):
-    if state["model"] != fingerprint() or state["schema"] != 1:
+    if state["model"] != fingerprint() or state["schema"] != 2:
         raise ValueError("Stored run uses a different scientific model or survey")
     ids = [r["id"] for r in state["results"]]
     if (
@@ -164,7 +164,7 @@ def synergy(row, baselines, pures):
     eta = row["cycles"][row["preferred"]]["eta"]
     if not all(
         eta > b["cycles"][b["preferred"]]["eta"]
-        and row["cost"] < b["cost"]
+        and row["netEnergyReturn"] > b["netEnergyReturn"]
         and row["climate"] < b["climate"]
         and row["carbon"] < b["carbon"]
         for b in baselines
@@ -186,9 +186,11 @@ def advance(state, batch):
     picks = select_batch(state["results"], batch, state["generation"])
     if not picks:
         return []
-    new = simulate(picks)
+    return incorporate(state, simulate(picks), state["generation"] + 1)
+
+
+def incorporate(state, new, generation):
     old = state["results"]
-    generation = state["generation"] + 1
 
     def blends(rows):
         return [r for r in rows if len(r["parts"]) > 1]
@@ -239,13 +241,45 @@ def run(output, batch):
     checkpoint = output / "data/state.json"
     state = json.loads(checkpoint.read_text()) if checkpoint.exists() else new_state()
     previous = state["tested"]
-    events = advance(state, batch)
-    if state["tested"] != previous:
+    migrated = state.get("schema") == 1 and state.get("model") == "7550aae150609a34"
+    events = []
+    if migrated:
+        # Recompute the actual tested membership under the new objective. Never copy old scores.
+        legacy = state
+        ids = [r["id"] for r in legacy["results"]]
+        if (
+            len(ids) != previous
+            or len(set(ids)) != previous
+            or legacy["total"] != TOTAL
+            or any(k not in catalogue() for k in ids)
+        ):
+            raise ValueError("Invalid source checkpoint for the physical resurvey")
+        state = new_state()
+        events.extend(
+            incorporate(state, simulate([catalogue()[k] for k in ids]), legacy["generation"])
+        )
+        current = {e["dossier"] for e in events}
+        for e in legacy["records"]:
+            k, kind = e["id"], e["kind"]
+            path = f"dossiers/{kind}-{k}.md"
+            if k not in ids or kind not in {"pareto", "zero-tailpipe"} or path != e["dossier"]:
+                raise ValueError("Invalid historical dossier")
+            if path not in current:
+                events.append(
+                    dict(
+                        id=k,
+                        kind="historical re-evaluation",
+                        generation=legacy["generation"],
+                        dossier=path,
+                    )
+                )
+    events.extend(advance(state, batch))
+    if migrated or state["tested"] != previous:
         write_dossiers(output, state, events)
         write_products(output, state)
         checkpoint.parent.mkdir(parents=True, exist_ok=True)
         manifest = checkpoint.with_name("manifest.json")
-        if not manifest.exists():
+        if migrated or not manifest.exists():
             rev = subprocess.run(
                 ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True
             )

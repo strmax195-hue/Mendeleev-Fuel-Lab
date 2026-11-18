@@ -45,7 +45,7 @@ def render(dest):
     words(48, 122, "AUTOMOTIVE THERMODYNAMICS", 17, "mono", muted)
     words(40, 165, "Liquid fuel", 83, "bold")
     words(44, 247, "observatory.", 99, "serif", lime)
-    words(49, 395, "Range, climate and production cost", 28)
+    words(49, 395, "Range, climate and energy return", 28)
     words(49, 435, "in a 50-litre tank.", 28)
     left, top, right, bottom = 725, 175, 1200, 425
     d.rounded_rectangle((683, 121, 1234, 485), 9, fill="#213f32", outline="#5d7b66", width=2)

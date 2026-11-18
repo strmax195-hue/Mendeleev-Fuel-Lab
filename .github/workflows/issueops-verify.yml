@@ -1,0 +1,25 @@
+name: Independent planetary replay
+on:
+  issues:
+    types: [opened, edited, reopened]
+permissions:
+  contents: read
+  issues: write
+jobs:
+  verify:
+    if: startsWith(github.event.issue.body, 'fuel-lab-replay-v1 ') || contains(github.event.issue.labels.*.name, '[PEER-REPRODUCED]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Read the published qualification snapshot
+        run: |
+          git fetch --quiet --no-tags origin refs/heads/lab-data
+          git show FETCH_HEAD:data/stage4.json > "$RUNNER_TEMP/planetary-index.json"
+      - name: Replay the receipt and award a matching qualification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m scripts.peer_verify --checkpoint "$RUNNER_TEMP/planetary-index.json"

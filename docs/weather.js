@@ -28,7 +28,7 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
     if (!current) return;
     const { screen: s, road, gate } = current;
     const [mask, bubble, cold, mu] = s.weather[t - builtin.report.minC];
-    const [cost, electricity, eroi, litres] = road.weather[t - builtin.report.minC];
+    const [primary, electricity, eroi, litres] = road.weather[t - builtin.report.minC];
     const r = report || builtin.report;
     const selected = s.assemblies[car.value].filter(([start]) => start <= t).at(-1)[1];
     set("weather-phase", phase(mask));
@@ -58,8 +58,8 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
       ["Bio-ester dose", fmt(s.doseVolPct, 1) + " vol%"],
       ["Fuel consumed / 100 km", fmt(litres, 2) + " L"],
       ["Wheel EROI", fmt(eroi, 3) + " ×"],
-      ["Delivered fuel / 100 km", "$" + fmt(cost, 2)],
-      ["Of which synthesis electricity", "$" + fmt(electricity, 2) + " / 100 km"],
+      ["Upstream primary energy", fmt(primary, 2) + " MJ/100 km"],
+      ["Synthesis electricity", fmt(electricity, 2) + " kWh/100 km"],
     ]);
     $("weather-materials").replaceChildren(
       ...Object.entries(r.materials).map(([id, [name, low]]) => {
@@ -138,7 +138,7 @@ globalThis.FuelWeather = function ({ $, make, set, fmt, lines, option, feedRoot 
 
   function compatible(index, state) {
     return (
-      index?.schema === 1 &&
+      index?.schema === 2 &&
       index.model === builtin.report.model &&
       index.stage1Model === state.model &&
       index.generation === state.generation &&

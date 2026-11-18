@@ -36,7 +36,7 @@ def issue_certificate(record, repo, dossier):
         "### Stage 2 survival certificate\n\n"
         f"**{gate['status'].upper()}** over −35 to +50 °C. Stock material verdict "
         f"**{record['screen']['retrofit']['stock']}**. Wheel EROI is {road['eroi']:.3f} "
-        f"and delivered fuel costs ${road['wtwUsd100']:.2f}/100 km at +15 °C.\n\n"
+        f"and upstream primary energy is {road['investedMj100']:.2f} MJ/100 km at +15 °C.\n\n"
         + (", ".join(gate["failures"]) or "No modeled gates failed")
         + ".\n\n"
         f"Stage 2 model `{record['model'][:16]}`. "
@@ -89,13 +89,13 @@ def reconcile(state, repo, certificates=None):
         title = (
             "Zero-tailpipe-carbon range record"
             if e["kind"] == "zero-tailpipe"
-            else "Eco-affordability and range record"
+            else "Energy return and range record"
         )
         body = (
             f'{marker}\nGeneration {e["generation"]} recorded **{r["name"]}**. At 110 km/h, the 50 L sedan '
-            f'projects **{r["range"]:.0f} km**, **${r["cost"]:.2f}/100 km** in production cost and '
+            f'projects **{r["range"]:.0f} km**, **{r["netEnergyReturn"]:.2f}×** tank energy return and '
             f'**{r["climate"]:.1f} g CO₂e/km** under the documented pathway assumptions. '
-            f'The Eco-Affordability Index is **{r["index"]:.1f}/100**.\n\n'
+            f'The physical performance index is **{r["index"]:.1f}/100**.\n\n'
             f'[Review the balance, P–V data and reproduction command](https://github.com/{repo}/blob/lab-data/{e["dossier"]}).'
         )
         if cert:

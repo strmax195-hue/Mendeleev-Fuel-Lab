@@ -27,14 +27,14 @@ def write_dossiers(output, state, events):
             "",
             f"Per mole of blend, the mean elemental inventory is **{fml}**. All fractions below are molar.",
             "",
-            "| Component | mol% | Source ΔfH, liquid, kJ/mol | Production USD/kg | USD/mol blend |",
+            "| Component | mol% | Source ΔfH, liquid, kJ/mol | Synthesis MJ/kg | Synthesis MJ/mol blend |",
             "|---|---:|---:|---:|---:|",
         ]
         for k, v in r["parts"].items():
             s = STOCKS[k]
             mass = sum(MODEL["weights"][e] * n for e, n in s["atoms"].items()) / 1000
             lines.append(
-                f'| {s["name"]} | {v} | {s["hf"]/1000:.3f} | {s["price"]:.4f} | {mass*s["price"]*v/100:.6f} |'
+                f'| {s["name"]} | {v} | {s["hf"]/1000:.3f} | {s["synthesisMjKg"]:.4f} | {mass*s["synthesisMjKg"]*v/100:.6f} |'
             )
         lines += [
             "",
@@ -59,10 +59,10 @@ def write_dossiers(output, state, events):
             )
         lines += [
             "",
-            f'The {r["preferred"]} sedan at 110 km/h covers {r["range"]:.1f} km per 50 L. Production cost is '
-            f'${r["cost"]:.2f}/100 km. Carbon balance gives {r["carbon"]:.1f} g CO₂/km. The pathway scenario gives {r["climate"]:.1f} g CO₂e/km.',
+            f'The {r["preferred"]} sedan at 110 km/h covers {r["range"]:.1f} km per 50 L. Upstream synthesis requires '
+            f'{r["synthesisMj100"]:.2f} MJ/100 km. Carbon balance gives {r["carbon"]:.1f} g CO₂/km. The pathway scenario gives {r["climate"]:.1f} g CO₂e/km.',
             "",
-            f'Eco-Affordability Index **{r["index"]:.2f}/100**. Component scores (0–1): '
+            f'Physical performance index **{r["index"]:.2f}/100**. Component scores (0–1): '
             + ", ".join(f"{k} {v:.3f}" for k, v in r["scoreParts"].items())
             + ".",
             "",
@@ -76,7 +76,7 @@ def write_dossiers(output, state, events):
             f'python3 -m engine.discovery_solver --verify {r["id"]}',
             "\x60\x60\x60",
             "",
-            "A simulation record warrants independent verification. Fuel compatibility, in-cylinder kinetics, engine-out and aftertreatment emissions, phase behaviour and costs require separate validation.",
+            "A simulation record warrants independent verification. Fuel compatibility, in-cylinder kinetics, engine-out and aftertreatment emissions, phase behaviour and pathway energy require separate validation.",
             "",
         ]
-        path.write_text("\n".join(lines))
+        path.write_text("\n".join(lines), encoding="utf-8")

@@ -48,9 +48,7 @@ PRESSURE = 101.325  # kPa absolute at sea level
 RAIL_PRESSURE = 350.0  # kPa absolute, low-pressure supply circuit
 INLET_LOSS = 15.0  # kPa from tank to low-pressure pump inlet
 GRID_PRIMARY = 2.0  # MJ primary per MJ delivered electricity
-POWER_PRICE = 0.12  # USD/kWh, allocation within the plant-gate price
 DELIVERY_MJ = 0.70  # primary MJ/kg distributed fuel
-DELIVERY_USD = 0.04  # USD/kg delivered, includes its energy
 MIN_EROI = 1.0  # tractive wheel energy / external invested primary energy
 # Evidence for scalable supply of the specific upstream pathway.
 SUPPLY_REVIEW = {"ipa", "oct", "dmc", "b100"}

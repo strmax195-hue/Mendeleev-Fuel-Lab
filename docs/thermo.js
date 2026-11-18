@@ -136,7 +136,17 @@
     if (terms.some(([s]) => s.melt >= T0 || s.boil <= T0) || vapor >= P0 || lhv <= 0)
       throw Error("Ambient liquid or net-energy bounds failed");
     const bp = root((t) => bubble(t) - P0, 290, 750, 360);
-    const cost = weighted((s) => (s.price * mw(s.atoms)) / 1000);
+    const synthesis = weighted((s) => (s.synthesisMjKg * mw(s.atoms)) / 1000);
+    const solarInput = terms.every(([s]) => s.solarRoute)
+      ? weighted((s) => {
+          const massKg = mw(s.atoms) / 1000;
+          const process = (s.synthesisMjKg * massKg) / M.solar.process;
+          if (s.solarRoute === "treatment") return process;
+          const heat =
+            (s.hf - s.atoms.C * M.cea.CO2.hf_j_mol - (s.atoms.H / 2) * M.cea.H2O.hf_j_mol) / 1e6;
+          return process + heat / (M.solar.crop * M.solar.recovery);
+        })
+      : null;
     const lifecycle = weighted((s) => {
       const m = mw(s.atoms) / 1000,
         c = s.atoms.C || 0,
@@ -163,7 +173,8 @@
       lhv,
       bp,
       vapor,
-      cost,
+      synthesis,
+      solarInput,
       lifecycle,
       abundance,
       infra: 0.4 + 0.6 * weighted((s) => s.infra),
@@ -296,7 +307,7 @@
     const kgKm = mjKm / row.mjKg;
     return {
       range: (50 * row.mjL) / mjKm,
-      cost: kgKm * row.usdKg * 100,
+      synthesisMj100: kgKm * row.synthesisMjKg * 100,
       carbon: kgKm * row.exhaust.CO2 * 1000,
       climate: mjKm * row.ci,
       kgKm,
@@ -335,7 +346,14 @@
       flameResidualJ: flame.residual,
       hfJ: f.hf,
       lhvJ: f.lhv,
-      usdKg: f.cost / f.mass,
+      synthesisMjKg: f.synthesis / f.mass,
+      netEnergyReturn: f.lhv / 1e6 / f.synthesis,
+      solarToTankPct: f.solarInput === null ? null : (100 * f.lhv) / 1e6 / f.solarInput,
+      elementPpm: Object.fromEntries(
+        M.elements
+          .filter((e) => f.atoms[e.symbol] > 0)
+          .map((e) => [e.symbol, { crust: e.ppm, air: e.airPpm, ocean: e.oceanPpm }]),
+      ),
       phase: parts.oct === 25 && parts.water === 45 ? "Measured reverse microemulsion" : "Liquid",
       ci: f.lifecycle / (f.lhv / 1e6),
       availability: f.abundance,
@@ -356,7 +374,7 @@
   function score(row, gas) {
     const reward = (x, base) => 1 / (1 + x / base);
     const parts = {
-      cost: reward(row.cost, gas.cost),
+      energy: row.netEnergyReturn / (row.netEnergyReturn + gas.netEnergyReturn),
       abundance: row.availability,
       lifecycle: reward(row.climate, gas.climate),
       no: reward(row.cycles[row.preferred].noPpm, gas.cycles.Otto.noPpm),
@@ -365,7 +383,7 @@
     };
     const index =
       100 *
-      (0.35 * parts.cost +
+      (0.35 * parts.energy +
         0.1 * parts.abundance +
         0.3 * parts.lifecycle +
         0.08 * parts.no +

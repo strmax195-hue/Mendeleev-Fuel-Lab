@@ -19,13 +19,11 @@ from .materials_db import (
 )
 from .stage2_inputs import (
     DELIVERY_MJ,
-    DELIVERY_USD,
     DOSES,
     GRID_PRIMARY,
     INLET_LOSS,
     MIN_EROI,
     PAIRS,
-    POWER_PRICE,
     PRESSURE,
     PROPERTIES,
     RAIL_PRESSURE,
@@ -38,7 +36,7 @@ TREF = 298.15
 TEMPS = range(-35, 51)
 SPLIT, SOLID, PHASE_REVIEW = 1, 2, 4
 ROAD_REFERENCE_C = 15
-ROAD_COLUMNS = ("wtwUsd100", "electricityUsd100", "eroi", "litres100")
+ROAD_COLUMNS = ("investedMj100", "synthesisKwh100", "eroi", "litres100")
 WEATHER_COLUMNS = ("phaseMask", "bubbleKpa", "coldIndex", "viscosityMpas")
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -283,7 +281,6 @@ def screen(parts):
     total_mass, net_mj = sum(mix["kg"].values()), sum(mix["mj"].values())
     kwh = sum(m * PROPERTIES[k].kwh for k, m in mix["kg"].items())
     other = sum(m * PROPERTIES[k].other_mj for k, m in mix["kg"].items())
-    price = sum(m * STOCKS[k]["price"] for k, m in mix["kg"].items())
     return {
         "weather": weather,
         "cycle": "Diesel" if ci else "Otto",
@@ -299,7 +296,6 @@ def screen(parts):
         "mjL": round(net_mj, 9),
         "kwhL": round(kwh, 9),
         "upstreamMjL": round(other, 9),
-        "gateUsdL": round(price, 9),
         "supplyReview": bool(parts.keys() & SUPPLY_REVIEW),
     }
 
@@ -322,8 +318,6 @@ def road_account(s, row, celsius=ROAD_REFERENCE_C):
         "investedMj100": round(external, 5),
         "eroi": round(wheel / external, 5),
         "synthesisKwh100": round(electricity, 5),
-        "electricityUsd100": round(electricity * POWER_PRICE, 5),
-        "wtwUsd100": round(litres * s["gateUsdL"] + mass * DELIVERY_USD, 5),
     }
 
 
@@ -333,7 +327,7 @@ def road_profile(s, row):
     return {**reference, "weather": [[a[k] for k in ROAD_COLUMNS] for a in ledgers]}
 
 
-def gate(s, account, reference_cost, weather_limits=None):
+def gate(s, account, reference_mj, weather_limits=None):
     """A fail blocks advancement; assumptions requiring measurement remain visible."""
     fails, reviews = [], []
     flags = [w[0] for w in s["weather"]]
@@ -372,13 +366,13 @@ def gate(s, account, reference_cost, weather_limits=None):
     lowest_eroi = min((w[2] for w in weather), default=account["eroi"])
     if lowest_eroi < MIN_EROI:
         fails.append("Wheel EROI below 1")
-    over_budget = account["wtwUsd100"] > reference_cost
+    exceeds_reference = account["investedMj100"] > reference_mj
     if weather_limits is not None:
         if len(weather) != len(TEMPS) or len(weather_limits) != len(TEMPS):
-            raise ValueError("Economic gate requires matching temperature grids")
-        over_budget = any(w[0] > limit for w, limit in zip(weather, weather_limits))
-    if over_budget:
-        fails.append("Delivered cost exceeds AI-95")
+            raise ValueError("Energy gate requires matching temperature grids")
+        exceeds_reference = any(w[0] > limit for w, limit in zip(weather, weather_limits))
+    if exceeds_reference:
+        fails.append("Upstream primary energy exceeds AI-95")
     if s["supplyReview"] or s["doseVolPct"]:
         reviews.append("Pathway / ester supply needs capacity evidence")
     return {

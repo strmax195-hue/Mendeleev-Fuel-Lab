@@ -6,10 +6,10 @@ from .svg_dashboard import frame, txt, fuel_map
 
 def pareto_plot(state):
     rows = state["results"] + state["baselines"]
-    xmax = max((r["cost"] for r in rows), default=1) * 1.1
+    xmax = max((r["netEnergyReturn"] for r in rows), default=1) * 1.1
     ymax = max((r["range"] for r in rows), default=1) * 1.12
     b = [
-        txt(26, 35, "Range and production cost", 24, "bold"),
+        txt(26, 35, "Range and net energy return", 24, "bold"),
         txt(26, 58, "50 L  /  sedan  /  110 km/h", 14, "mono"),
     ]
     for i in range(5):
@@ -25,11 +25,11 @@ def pareto_plot(state):
     b.extend(
         [
             txt(26, 83, "km", 12, "mono"),
-            txt(402, 269, "Production cost (USD / 100 km)", 13, "", 'text-anchor="middle"'),
+            txt(402, 269, "Tank energy / synthesis input (MJ/MJ)", 13, "", 'text-anchor="middle"'),
         ]
     )
     for r in sorted(rows, key=lambda r: r["id"] in state["frontier"]):
-        x = 72 + 672 * r["cost"] / xmax
+        x = 72 + 672 * r["netEnergyReturn"] / xmax
         y = 224 - 134 * r["range"] / ymax
         cls = (
             "accent"
@@ -49,7 +49,7 @@ def pareto_plot(state):
     )
     return frame(
         "Pareto frontier",
-        "Maximise range, minimise production cost and lifecycle greenhouse gas emissions.",
+        "Maximise range and energy return and minimise lifecycle greenhouse gas emissions.",
         b,
         790,
         312,
@@ -63,9 +63,14 @@ def write_products(output, state):
 
     stage2 = publish(output, state)
     stage3 = publish_calibration(output, state, stage2)
+    from .stage4_publish import publish as publish_planetary
+
+    stage4 = publish_planetary(output, state, stage3)
     assets = output / "assets"
     assets.mkdir(parents=True, exist_ok=True)
-    (assets / "mendeleev-fuel.svg").write_text(fuel_map(state, stage2, stage3), encoding="utf-8")
+    (assets / "mendeleev-fuel.svg").write_text(
+        fuel_map(state, stage2, stage3, stage4), encoding="utf-8"
+    )
     (assets / "pareto.svg").write_text(pareto_plot(state), encoding="utf-8")
     badges = output / "badges"
     badges.mkdir(exist_ok=True)
@@ -76,6 +81,8 @@ def write_products(output, state):
             f'{stage2["funnel"]["passed"]}/{len(stage2["nominated"])}',
         ),
         ("calibration", "Stage 3 model champions", str(len(stage3["champions"]))),
+        ("biosphere", "Stage 4 verified", str(len(stage4["verified"]))),
+        ("peer", "PEER-REPRODUCED", str(len(stage4["peerReproduced"]))),
         ("coverage", "survey", f'{100*state["tested"]/state["total"]:.1f}%'),
         ("generation", "generation", str(state["generation"])),
         ("frontier", "Pareto frontier", str(len(state["frontier"]))),

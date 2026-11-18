@@ -41,7 +41,7 @@ def simulate(blends, *, reference=False, trace=False, step=2):
         jobs.append(dict(parts=parts, reference=reference, trace=trace, step=step))
     if not jobs:
         return []
-    if (ROOT / "docs/model.js").read_text() != model_script():
+    if (ROOT / "docs/model.js").read_text(encoding="utf-8") != model_script():
         raise RuntimeError("Stale model data. Run python -m scripts.build_assets.")
     process = subprocess.run(
         ["node", str(ROOT / "scripts/run_model.cjs")],

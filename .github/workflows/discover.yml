@@ -25,7 +25,12 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_physics.py' -v
           python3 -m unittest discover -s tests -p 'test_stage2_survival.py' -v
           python3 -m unittest discover -s tests -p 'test_stage3_calibration.py' -v
+          python3 -m unittest discover -s tests -p 'test_stage4_planetary.py' -v
+      - name: Collect independent numerical receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m scripts.peer_verify --collect "$RUNNER_TEMP/receipts.json"
       - name: Evaluate and publish the next generation
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash scripts/publish.sh
+        run: FUEL_LAB_PEER_CLAIMS="$RUNNER_TEMP/receipts.json" bash scripts/publish.sh

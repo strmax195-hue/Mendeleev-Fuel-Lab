@@ -20,6 +20,7 @@ def model_hash():
     h = hashlib.sha256((fingerprint() + stage2_hash()).encode("ascii"))
     for file in (
         "engine/stage3_calibration.py",
+        "engine/fuel_quality.py",
         "engine/wltp_simulator.py",
         "engine/bench_protocol.py",
         "engine/stage3_publish.py",
@@ -122,6 +123,16 @@ def build(state, second, get_weather, contribution_source=None):
     return index, entries
 
 
+def source_revision():
+    rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True)
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain"], cwd=ROOT, text=True, capture_output=True
+    )
+    return (
+        rev.stdout.strip() if rev.returncode == dirty.returncode == 0 and not dirty.stdout else None
+    )
+
+
 def publish(output, state, second):
     from cli.calibration_worker import contributed
 
@@ -168,15 +179,7 @@ def publish(output, state, second):
     ledger.write_bytes(bytes_for(events))
     manifest = data / "stage3-manifest.json"
     if not manifest.exists() or json.loads(manifest.read_bytes())["model"] != model_hash():
-        rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, capture_output=True)
-        dirty = subprocess.run(
-            ["git", "status", "--porcelain"], cwd=ROOT, text=True, capture_output=True
-        )
-        commit = (
-            rev.stdout.strip()
-            if rev.returncode == dirty.returncode == 0 and not dirty.stdout
-            else None
-        )
+        commit = source_revision()
         manifest.write_bytes(
             bytes_for(
                 {

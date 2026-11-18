@@ -7,7 +7,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       name="description"
-      content="An open automotive thermodynamics observatory for liquid fuel range, lifecycle carbon and production cost."
+      content="An open automotive thermodynamics observatory for liquid fuel range, lifecycle carbon and physical energy return."
     />
     <meta property="og:title" content="Mendeleev Fuel Lab · Liquid fuel observatory" />
     <meta
@@ -23,6 +23,9 @@
     <script defer src="weather.js"></script>
     <script defer src="calibration-seed.js"></script>
     <script defer src="calibration.js"></script>
+    <script defer src="planetary-seed.js"></script>
+    <script defer src="planetary.js"></script>
+    <script defer src="cylinder3d.js"></script>
     <script defer src="app.js"></script>
   </head>
   <body>
@@ -37,7 +40,8 @@
         <nav aria-label="Main navigation">
           <a href="#elements">Periodic map</a><a href="#explorer">Frontier</a
           ><a href="#bench">Blend lab</a><a href="#race">Tank race</a
-          ><a href="#weather">Weather tester</a><a href="#calibration">ECU maps</a>
+          ><a href="#weather">Weather tester</a><a href="#calibration">ECU maps</a
+          ><a href="#planetary">Planetary audit</a><a href="#cylinder">Cylinder</a>
         </nav>
         <div class="mast-tools">
           <button
@@ -60,8 +64,8 @@
             <div class="overline"><span class="signal"></span> Automotive thermodynamics</div>
             <h1>Liquid fuel<br /><em>observatory.</em></h1>
             <p>
-              Explore how far a 50-litre tank can go, what the fuel costs to produce and what leaves
-              the tailpipe.
+              Explore how far a 50-litre tank can go, how much energy its synthesis requires and
+              what leaves the tailpipe.
             </p>
             <a class="hero-link" href="#bench"
               >Open blend laboratory <span class="arrow" aria-hidden="true"></span
@@ -89,7 +93,7 @@
             <small id="count"></small>
           </div>
           <div>
-            <span>Eco-Affordability leader</span><strong id="stat-index"></strong
+            <span>Physical performance leader</span><strong id="stat-index"></strong
             ><small id="index-label"></small>
           </div>
           <div>
@@ -144,7 +148,7 @@
           <div class="explore-layout">
             <div class="panel chart-card">
               <div class="panel-title">
-                <h3>Cost against range</h3>
+                <h3>Energy return against range</h3>
                 <label class="compact"
                   ><input id="front-only" type="checkbox" /> Frontier only</label
                 >
@@ -153,7 +157,7 @@
                 id="scatter"
                 viewBox="0 0 610 296"
                 role="group"
-                aria-label="Range and production cost. Select a point to inspect a candidate."
+                aria-label="Range and net energy return. Select a point to inspect a candidate."
               ></svg>
               <div class="chart-key">
                 <span>Lifecycle CO₂e/km</span><i></i><span>Lower → higher</span><b>◇</b
@@ -173,8 +177,8 @@
               <label class="compact"
                 >Rank by
                 <select id="rank">
-                  <option value="index">Eco-Affordability</option>
-                  <option value="cost">Production cost</option>
+                  <option value="index">Physical performance</option>
+                  <option value="netEnergyReturn">Net energy return</option>
                   <option value="climate">Lifecycle CO₂e</option>
                   <option value="range">Tank range</option>
                 </select></label
@@ -187,7 +191,7 @@
                     <th>Liquid candidate</th>
                     <th>Index</th>
                     <th>Range, km</th>
-                    <th>$/100 km</th>
+                    <th>MJ out/in</th>
                     <th>g CO₂e/km</th>
                   </tr>
                 </thead>
@@ -195,6 +199,70 @@
               </table>
             </div>
             <p class="note" id="anomalies"></p>
+          </div>
+        </section>
+        <section id="planetary" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Stage 4 · closed-loop audit</div>
+              <h2>Planetary resource ceiling</h2>
+            </div>
+            <span id="planet-source" class="subtle"></span>
+          </div>
+          <div class="panel planet-panel">
+            <div class="panel-title">
+              <label>Fuel and architecture<select id="planet-case"></select></label>
+              <strong id="planet-funnel"></strong>
+            </div>
+            <p id="planet-state" role="status"></p>
+            <p id="planet-peer" class="peer-mark" hidden>[PEER-REPRODUCED]</p>
+            <dl id="planet-metrics" class="weather-readings mini-dl"></dl>
+            <p id="planet-fate" class="note"></p>
+            <p id="planet-verify" class="note"></p>
+            <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE4.md"
+              >Audit boundaries and peer replay</a
+            >
+          </div>
+        </section>
+        <section id="cylinder" class="section">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Crank-angle combustion</div>
+              <h2>Cylinder cutaway</h2>
+            </div>
+            <span class="subtle">Synchronized candidate and road control</span>
+          </div>
+          <div class="panel cylinder-panel">
+            <div class="cyl-controls">
+              <label>Candidate<select id="cyl-fuel"></select></label>
+              <label
+                >Reference cycle<select id="cyl-cycle">
+                  <option value="Otto">Otto · AI-95</option>
+                  <option value="Diesel">Diesel · road diesel</option>
+                </select></label
+              >
+              <button id="cyl-play" class="button outline" type="button">Play cycle</button>
+            </div>
+            <div id="cyl-stage">
+              <canvas
+                id="cyl-canvas"
+                aria-label="Three-dimensional side-by-side cutaway cylinders"
+              ></canvas>
+              <div class="cyl-captions">
+                <span id="cyl-label"></span><span id="cyl-control"></span>
+              </div>
+            </div>
+            <div class="cyl-scrub">
+              <label for="cyl-angle">Crank angle · <output id="cyl-deg">0°</output></label>
+              <input id="cyl-angle" type="range" min="-360" max="359" value="10" step="1" />
+            </div>
+            <p id="cyl-values" class="cyl-values"></p>
+            <p id="cyl-status" class="note"></p>
+            <p class="note">
+              Slow motion at a modeled 2,000 rpm. Pressure and temperature follow the indicator
+              trace. The flame surface and spray illustrate reduced-order combustion. Gas exchange
+              uses slider–crank geometry.
+            </p>
           </div>
         </section>
         <section id="weather" class="section">
@@ -244,7 +312,7 @@
             </div>
           </div>
           <p class="note">
-            Costs assume a running sedan at 110 km/h. Cooler air increases drag and fuel
+            Road loads assume a running sedan at 110 km/h. Cooler air increases drag and fuel
             consumption. Cold-soak starting, seal fits, RVP and pump wear require vehicle or
             laboratory tests.
             <a href="https://github.com/strmax195-hue/Mendeleev-Fuel-Lab/blob/main/STAGE2.md"
@@ -423,8 +491,8 @@
             <div class="eyebrow">Model &amp; scope</div>
             <h3>Read the assumptions behind the numbers.</h3>
             <p>
-              Idealised combustion, historical production-cost scenarios and pathway-specific
-              lifecycle inventories. Ordinary automotive liquids are flammable. Simulation use only.
+              Idealised combustion, physical pathway inventories and pathway-specific lifecycle
+              inventories. Ordinary automotive liquids are flammable. Simulation use only.
             </p>
           </div>
           <a

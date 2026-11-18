@@ -27,11 +27,9 @@ from engine.materials_db import (
 from engine.stage2_publish import BEGIN, block, build, certificate, contributions
 from engine.stage2_survival import (
     DELIVERY_MJ,
-    DELIVERY_USD,
     DOSES,
     GRID_PRIMARY,
     PHASE_REVIEW,
-    POWER_PRICE,
     ROOT,
     SOLID,
     SPLIT,
@@ -164,14 +162,14 @@ class SurvivalPhysics(unittest.TestCase):
             self.assertAlmostEqual(sum(mix["mj"].values()), (reactants_h - products_h) / 1e6)
         self.assertLess(lower_heat("water"), 0)
 
-    def test_weather_changes_drag_wheel_work_and_delivered_cost(self):
+    def test_weather_changes_drag_wheel_work_and_primary_energy(self):
         row = seed()["baselines"][0]
         physical = screen(row["parts"])
         ledger = road_profile(physical, row)
         cold, warm = road_account(physical, row, -35), road_account(physical, row, 50)
-        self.assertGreater(cold["wtwUsd100"], warm["wtwUsd100"])
+        self.assertGreater(cold["investedMj100"], warm["investedMj100"])
         self.assertGreater(cold["litres100"], warm["litres100"])
-        self.assertEqual(ledger["weather"][50][0], ledger["wtwUsd100"])
+        self.assertEqual(ledger["weather"][50][0], ledger["investedMj100"])
         predicted_delta = row["dragN"] * 288.15 * (1 / 238.15 - 1 / 323.15) / 10
         self.assertAlmostEqual(cold["wheelMj100"] - warm["wheelMj100"], predicted_delta, places=4)
         self.assertAlmostEqual(
@@ -179,14 +177,14 @@ class SurvivalPhysics(unittest.TestCase):
         )
         limits = [w[0] + 0.01 for w in ledger["weather"]]
         self.assertNotIn(
-            "Delivered cost exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
+            "Upstream primary energy exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
         )
         limits[0] -= 0.02
         self.assertIn(
-            "Delivered cost exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
+            "Upstream primary energy exceeds AI-95", gate(physical, ledger, 99, limits)["failures"]
         )
 
-    def test_road_work_upstream_energy_and_cost_ledgers(self):
+    def test_road_work_upstream_energy_ledgers(self):
         state = seed()
         for row in state["baselines"] + state["results"]:
             s = screen(row["parts"])
@@ -202,22 +200,20 @@ class SurvivalPhysics(unittest.TestCase):
                 delta=0.0003,
             )
             self.assertAlmostEqual(a["eroi"], a["wheelMj100"] / a["investedMj100"], places=5)
-            self.assertAlmostEqual(
-                a["electricityUsd100"], litres * s["kwhL"] * POWER_PRICE, places=5
-            )
-            self.assertAlmostEqual(
-                a["wtwUsd100"], litres * (s["gateUsdL"] + s["kgL"] * DELIVERY_USD), places=5
-            )
+            self.assertAlmostEqual(a["synthesisKwh100"], litres * s["kwhL"], places=5)
+            self.assertAlmostEqual(a["fuelMj100"], litres * s["mjL"], places=5)
             if not s["doseVolPct"]:
                 self.assertAlmostEqual(s["mjL"], row["mjL"], places=7)
                 self.assertAlmostEqual(
-                    a["wtwUsd100"], row["cost"] + 100 * row["kgKm"] * DELIVERY_USD, places=5
+                    a["investedMj100"],
+                    row["synthesisMj100"] + 100 * row["kgKm"] * DELIVERY_MJ,
+                    places=5,
                 )
         s = screen({"dmc": 100})
-        g = gate(s, {"eroi": 0.5, "wtwUsd100": 9}, 3)
+        g = gate(s, {"eroi": 0.5, "investedMj100": 9}, 3)
         self.assertEqual(g["status"], "rejected")
         self.assertIn("Wheel EROI below 1", g["failures"])
-        self.assertIn("Delivered cost exceeds AI-95", g["failures"])
+        self.assertIn("Upstream primary energy exceeds AI-95", g["failures"])
 
 
 class PublicationAndWorker(unittest.TestCase):

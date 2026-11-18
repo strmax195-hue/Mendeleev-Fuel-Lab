@@ -6,6 +6,7 @@ from engine.fuel_simulator import ROOT, model_script
 from engine.svg_progress import pareto_plot
 from engine.svg_dashboard import fuel_map
 from engine.stage2_publish import build
+from engine.stage4_publish import build as build_planetary
 from engine.stage3_publish import build as build_calibration
 from engine.stage2_survival import canonical
 
@@ -30,8 +31,14 @@ def main():
             + ";\n"
         ).encode("ascii")
     )
+    fourth, audits = build_planetary(state, third)
+    (ROOT / "docs/planetary-seed.js").write_bytes(
+        (
+            "globalThis.FUEL_PLANETARY=" + canonical({"report": fourth, "rows": audits}) + ";\n"
+        ).encode("ascii")
+    )
     (ROOT / "assets/mendeleev-fuel.svg").write_text(
-        fuel_map(state, report, third), encoding="utf-8"
+        fuel_map(state, report, third, fourth), encoding="utf-8"
     )
     (ROOT / "assets/pareto.svg").write_text(pareto_plot(state))
 
