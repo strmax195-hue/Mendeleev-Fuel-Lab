@@ -46,7 +46,8 @@ Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material 
 |---|---|
 | Liquid–liquid split / solid or cloud risk | 36 / 17 of 86 temperatures |
 | Four-volume RVP proxy at 37.8 °C | 10.26 kPa |
-| −35 °C cold-cranking index | unavailable |
+| −35 °C ambient SI lean-limit index | unavailable |
+| −35 °C first firing · Enriched GDI | phase-blocked |
 | +50 °C rail / inlet margins | 330.89 / 67.22 kPa |
 | Ambient dynamic viscosity at +20 °C | 1.789 mPa·s |
 | Estimated wear before / after | 506 / 506 µm |
@@ -58,9 +59,9 @@ Computational outcome **REJECTED** on the −35 to +50 °C grid. Stock material 
 
 **Failed gates** · Liquid–liquid split, Crystallisation / cloud point, Wheel EROI below 1, Upstream primary energy exceeds AI-95.
 
-**Further evidence** · Phase envelope needs bench data, Cranking volatility unavailable in the cold phase state, Pathway / ester supply needs capacity evidence.
+**Further evidence** · Phase envelope needs bench data, Pathway / ester supply needs capacity evidence.
 
-Stage 1 `ab1c8d57d86fc396` · Stage 2 SHA-256 `6b3e26597bc282100e4e73a21d6e0f612de247216ba83e5f57170fa47245b606`.
+Stage 1 `ab1c8d57d86fc396` · Stage 2 SHA-256 `f7fe3597dc5289a0c27bbce1c8a21f8b9c8786d888329b2f0235ca628d501abb`.
 
 Reproduce the physical sector with `python cli/local_worker.py --start 442 --count 1`. [Read all 86 temperatures](../data/weather/eth30-oct25-water45.json) · [Find the source revision](../data/stage2-manifest.json).
 <!-- fuel-lab stage2 end -->
